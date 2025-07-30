@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  DESSERT
+}
+
+enum Cuisine {
+  VIETNAMESE
+  JAPANESE
+  KOREAN
+  CHINESE
+  THAI
+  INDIAN
+  EUROPEAN
+  AMERICAN
+  MEXICAN
+}
+
+enum Occasions {
+  PARTY
+  BIRTHDAY
+  HOLIDAY
+  VEGETARIAN_DAY
+  WEATHER_BASED_FOOD
+}
+
+enum DietaryPreferences {
+  VEGETARIAN
+  VEGAN
+  KETO_LOW_CARB
+  FUNCTIONAL_FOOD
+  GLUTEN_FREE
+  WEIGHT_LOSS
+}
+
+enum MainIngredients {
+  CHICKEN
+  BEEF
+  PORK
+  SEAFOOD
+  EGG
+  VEGETABLES
+  TOFU
+}
+
+enum CookingMethod {
+  FRY
+  GRILL
+  STEAM
+  STIR_FRY
+  BOIL
+  SIMMER
+  SOUP
+}
+
+enum TimeBased {
+  UNDER_15_MIN
+  MIN_15_TO_30
+  OVER_1_HOUR
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum OtpType {
+  PASSWORD_RESET
+  DEVICE_VERIFICATION
+}
+
+enum MessageType {
+  MEDIA
+  POST
+  TEXT
+  RECIPE
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  lastName   String
+  firstName  String
+  username   String    @unique
+  gender     Gender?
+  birthday   DateTime?
+  bio        String?
+  slug       String?   @unique
+  avatar     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  otps                Otp[]
+  sessions            Session[]
+  savedRecipes        UserSavedRecipe[]
+  savedPosts          UserSavedPost[]
+  followers           Relationship[] @relation("UserFollowers")
+  following           Relationship[] @relation("UserFollowing")
+  authoredRecipes     Recipe[]       @relation("RecipeAuthor")
+  authoredIngredients Ingredient[]   @relation("IngredientAuthor")
+  recipeRatings       RecipeRating[]
+  authoredPosts       Post[]         @relation("PostAuthor")
+  postShares          PostShare[]
+  postLikes           PostLike[]
+  postComments        PostComment[]
+  conversationMembers Member[]
+  sentMessages        Message[]      @relation("MessageSender")
+  seenMessages        Seen[]
+  sentNotifications   Notification[] @relation("NotificationSender")
+  receivedNotifications Notification[] @relation("NotificationReceiver")
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  code      String
+  type      OtpType
+  expireAt  DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  refreshToken String
+  expireAt     DateTime
+  isRevoke     Boolean  @default(false)
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSavedRecipe {
+  userId    Int
+  recipeId  Int
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, recipeId])
+}
+
+model UserSavedPost {
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model Relationship {
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+model Recipe {
+  id          Int      @id @default(autoincrement())
+  authorId    Int
+  title       String
+  slug        String? @unique
+  description String?
+  time        Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author              User                @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  savedByUsers        UserSavedRecipe[]
+  ingredients         RecipeIngredient[]
+  steps               RecipeStep[]
+  images              RecipeImage[]
+  utensils            RecipeUtensil[]
+  categories          RecipeCategory?
+  ratings             RecipeRating[]
+  posts               Post[]
+}
+
+model Ingredient {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String?  @unique
+  unit      String?
+  calories  Float    @default(0)
+  protein   Float    @default(0)
+  fat       Float    @default(0)
+  carbs     Float    @default(0)
+  image     String?
+  authorId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author  User?              @relation("IngredientAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  recipes RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  recipeId     Int
+  ingredientId Int
+  quantity     Float?
+  unit         String?
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([recipeId, ingredientId])
+}
+
+model RecipeStep {
+  id          Int     @id @default(autoincrement())
+  recipeId    Int
+  description String
+  image       String?
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model RecipeImage {
+  id       Int    @id @default(autoincrement())
+  recipeId Int
+  imageUrl String
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model RecipeUtensil {
+  id       Int    @id @default(autoincrement())
+  recipeId Int
+  utensil  String
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model RecipeCategory {
+  recipeId             Int  @id
+  mealType             MealType?
+  cuisine              Cuisine?
+  occasions            Occasions?
+  dietaryPreferences   DietaryPreferences?
+  mainIngredients      MainIngredients?
+  cookingMethod        CookingMethod?
+  timeBased            TimeBased?
+  difficultyLevel      DifficultyLevel?
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model RecipeRating {
+  id        Int      @id @default(autoincrement())
+  recipeId  Int
+  userId    Int
+  rating    Int      
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id            Int      @id @default(autoincrement())
+  authorId      Int
+  caption       String?
+  recipeId      Int
+  likesCount    Int      @default(0)
+  commentsCount Int      @default(0)
+  sharesCount   Int      @default(0)
+  slug          String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author       User           @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipe       Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  savedByUsers UserSavedPost[]
+  shares       PostShare[]
+  likes        PostLike[]
+  comments     PostComment[]
+  media        PostMedia[]
+}
+
+model PostShare {
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+model PostLike {
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+model PostComment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PostMedia {
+  id     Int       @id @default(autoincrement())
+  postId Int
+  url    String
+  type   MediaType
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  members  Member[]
+  messages Message[]
+}
+
+model Member {
+  conversationId Int
+  userId         Int
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             Int         @id @default(autoincrement())
+  conversationId Int
+  sender         Int
+  content        String
+  replyOf        Int?
+  type           MessageType
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser     User         @relation("MessageSender", fields: [sender], references: [id], onDelete: Cascade)
+  replyToMessage Message?     @relation("MessageReply", fields: [replyOf], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("MessageReply")
+  seenBy         Seen[]
+}
+
+model Seen {
+  messageId Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  sender    Int
+  receiver  Int
+  content   String
+  url       String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  senderUser   User @relation("NotificationSender", fields: [sender], references: [id], onDelete: Cascade)
+  receiverUser User @relation("NotificationReceiver", fields: [receiver], references: [id], onDelete: Cascade)
+}
