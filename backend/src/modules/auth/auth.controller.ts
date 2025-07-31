@@ -8,6 +8,9 @@ import { User } from '@prisma/client';
 import * as ms from 'ms';
 import { JWT_REFRESH_EXPIRES_IN } from 'src/common/constants/jwt.constant';
 import { Response, Request } from 'express';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgotPasswordDto } from './dto/fotgot-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -56,5 +59,20 @@ export class AuthController {
     @CurrentUser('sessionId') sessionId: number,
   ) {
     return this.authService.refresh(currentUser, sessionId);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('verify')
+  async verify(@Body() verifyDto: VerifyOtpDto) {
+    return this.authService.verify(verifyDto);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }

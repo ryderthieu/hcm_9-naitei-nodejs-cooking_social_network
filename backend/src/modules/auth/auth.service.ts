@@ -18,14 +18,20 @@ import {
   JWT_SECRET,
 } from 'src/common/constants/jwt.constant';
 import * as ms from 'ms';
-import { User } from '@prisma/client';
+import { OtpType, User } from '@prisma/client';
 import { Request } from 'express';
-
+import { generateOtp } from 'src/common/utils/otp.utils';
+import { EmailService } from '../email/email.service';
+import { OTP_EXPIRATION_TIME } from 'src/common/constants/otp.constant';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgotPasswordDto } from './dto/fotgot-password.dto';
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -156,5 +162,105 @@ export class AuthService {
     );
 
     return { accessToken };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: forgotPasswordDto.email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email is not exists');
+    }
+
+    await this.prisma.otp.deleteMany({
+      where: {
+        userId: user.id,
+        type: OtpType.PASSWORD_RESET,
+      },
+    });
+
+    const { otp, expireAt } = generateOtp();
+    await this.prisma.otp.create({
+      data: {
+        userId: user.id,
+        code: otp.toString(),
+        type: OtpType.PASSWORD_RESET,
+        expireAt,
+      },
+    });
+
+    await this.emailService.sendEmail(
+      user.email,
+      otp.toString(),
+      user.firstName,
+      OTP_EXPIRATION_TIME,
+    );
+
+    return {
+      message: 'OTP has been sent to your email',
+    };
+  }
+
+  async verify(verifyDto: VerifyOtpDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: verifyDto.email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email is not exists');
+    }
+
+    const otp = await this.prisma.otp.findFirst({
+      where: {
+        code: verifyDto.otp,
+        userId: user.id,
+      },
+    });
+
+    if (!otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (otp.expireAt < new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    await this.prisma.otp.delete({
+      where: { id: otp.id },
+    });
+
+    return {
+      message: 'OTP verified successfully',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: resetPasswordDto.email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email is not exists');
+    }
+
+    if (resetPasswordDto.password !== resetPasswordDto.confirmPassword) {
+      throw new BadRequestException(
+        'Password and confirm password do not match',
+      );
+    }
+
+    const hashedPassword = await hashPassword(resetPasswordDto.password);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return {
+      message: 'Password reset successfully',
+    };
   }
 }
