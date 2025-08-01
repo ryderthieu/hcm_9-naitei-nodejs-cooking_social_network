@@ -30,8 +30,8 @@ const USER_SELECT_FIELDS = {
   updatedAt: true,
   _count: {
     select: {
-      followers: true,
-      following: true,
+      followers: true, 
+      following: true, 
       authoredRecipes: true,
       authoredPosts: true,
     },
@@ -101,7 +101,7 @@ export class UsersService {
     });
   }
 
-  async getUserByUsername(username: string): Promise<SingleUserResponseDto> {
+  async getUserByUsername(username: string, currentUser?: User): Promise<SingleUserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: USER_SELECT_FIELDS,
@@ -112,6 +112,12 @@ export class UsersService {
     }
 
     const userDto = this.createUserResponseDto(user);
+
+    if (currentUser && currentUser.id !== user.id) {
+      const followStatus = await this.checkFollowStatus(currentUser, username);
+      (userDto as any).isFollowing = followStatus.isFollowing;
+    }
+
     return new SingleUserResponseDto(userDto);
   }
 
@@ -227,5 +233,236 @@ export class UsersService {
     return this.prisma.user.findUnique({
       where: { id },
     });
+  }
+
+  async followUser(currentUser: User, username: string): Promise<{ message: string }> {
+    const targetUser = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true, username: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (targetUser.id === currentUser.id) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+
+    const existingFollow = await this.prisma.relationship.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: targetUser.id,
+        },
+      },
+    });
+
+    if (existingFollow) {
+      throw new ConflictException('Already following this user');
+    }
+
+    await this.prisma.relationship.create({
+      data: {
+        followerId: currentUser.id,
+        followingId: targetUser.id,
+      },
+    });
+
+    return { message: `Successfully followed ${targetUser.username}` };
+  }
+
+  async unfollowUser(currentUser: User, username: string): Promise<{ message: string }> {
+    const targetUser = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true, username: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (targetUser.id === currentUser.id) {
+      throw new BadRequestException('Cannot unfollow yourself');
+    }
+
+    const existingFollow = await this.prisma.relationship.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: targetUser.id,
+        },
+      },
+    });
+
+    if (!existingFollow) {
+      throw new NotFoundException('Not following this user');
+    }
+
+    await this.prisma.relationship.delete({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: targetUser.id,
+        },
+      },
+    });
+
+    return { message: `Successfully unfollowed ${targetUser.username}` };
+  }
+
+  async getFollowers(
+    username: string,
+    page: number = 1,
+    limit: number = 10,
+    name?: string,
+  ): Promise<MultipleUsersResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {
+      followingId: user.id,
+    };
+
+    if (name) {
+      whereClause.follower = {
+        OR: [
+          { firstName: { contains: name } },
+          { lastName: { contains: name } },
+          { username: { contains: name } },
+        ],
+      };
+    }
+
+    const [relationships, total] = await Promise.all([
+      this.prisma.relationship.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          follower: {
+            select: USER_SELECT_FIELDS,
+          },
+        },
+      }),
+      this.prisma.relationship.count({ where: whereClause }),
+    ]);
+
+    const followers = relationships.map((rel) => rel.follower);
+    const userDtos = followers.map((follower) => this.createUserResponseDto(follower));
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return new MultipleUsersResponseDto(userDtos, {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+    });
+  }
+
+  async getFollowings(
+    username: string,
+    page: number = 1,
+    limit: number = 10,
+    name?: string,
+  ): Promise<MultipleUsersResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {
+      followerId: user.id,
+    };
+
+    if (name) {
+      whereClause.following = {
+        OR: [
+          { firstName: { contains: name } },
+          { lastName: { contains: name } },
+          { username: { contains: name } },
+        ],
+      };
+    }
+
+    const [relationships, total] = await Promise.all([
+      this.prisma.relationship.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          following: {
+            select: USER_SELECT_FIELDS,
+          },
+        },
+      }),
+      this.prisma.relationship.count({ where: whereClause }),
+    ]);
+
+    const following = relationships.map((rel) => rel.following);
+    const userDtos = following.map((followedUser) => this.createUserResponseDto(followedUser));
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return new MultipleUsersResponseDto(userDtos, {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+    });
+  }
+
+  async checkFollowStatus(
+    currentUser: User | null,
+    targetUsername: string,
+  ): Promise<{ isFollowing: boolean }> {
+    if (!currentUser) {
+      return { isFollowing: false };
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { username: targetUsername },
+      select: { id: true },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    const relationship = await this.prisma.relationship.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUser.id,
+          followingId: targetUser.id,
+        },
+      },
+    });
+
+    return { isFollowing: !!relationship };
   }
 }

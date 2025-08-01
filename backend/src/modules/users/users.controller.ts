@@ -3,6 +3,7 @@ import {
   Get,
   Put,
   Delete,
+  Post,
   Body,
   Param,
   Query,
@@ -72,7 +73,61 @@ export class UsersController {
   @UseGuards(OptionalAuthGuard)
   async getUserByUsername(
     @Param('username') username: string,
+    @CurrentUser() currentUser?: User,
   ): Promise<SingleUserResponseDto> {
-    return this.usersService.getUserByUsername(username);
+    return this.usersService.getUserByUsername(username, currentUser);
+  }
+
+  @Post(':username/follow')
+  @UseGuards(JwtAuthGuard)
+  async followUser(
+    @CurrentUser('user') currentUser: User,
+    @Param('username') username: string,
+  ): Promise<{ message: string }> {
+    return this.usersService.followUser(currentUser, username);
+  }
+
+  @Delete(':username/follow')
+  @UseGuards(JwtAuthGuard)
+  async unfollowUser(
+    @CurrentUser('user') currentUser: User,
+    @Param('username') username: string,
+  ): Promise<{ message: string }> {
+    return this.usersService.unfollowUser(currentUser, username);
+  }
+
+  @Get(':username/followers')
+  @UseGuards(OptionalAuthGuard)
+  async getFollowers(
+    @Param('username') username: string,
+    @Query('page', new ParseIntPipe({ optional: true }))
+    page: number = DEFAULT_PAGE,
+    @Query('limit', new ParseIntPipe({ optional: true }))
+    limit: number = DEFAULT_LIMIT,
+    @Query('name') name?: string,
+  ): Promise<MultipleUsersResponseDto> {
+    return this.usersService.getFollowers(username, page, limit, name);
+  }
+
+  @Get(':username/followings')
+  @UseGuards(OptionalAuthGuard)
+  async getFollowing(
+    @Param('username') username: string,
+    @Query('page', new ParseIntPipe({ optional: true }))
+    page: number = DEFAULT_PAGE,
+    @Query('limit', new ParseIntPipe({ optional: true }))
+    limit: number = DEFAULT_LIMIT,
+    @Query('name') name?: string,
+  ): Promise<MultipleUsersResponseDto> {
+    return this.usersService.getFollowings(username, page, limit, name);
+  }
+
+  @Get(':username/follow-status')
+  @UseGuards(OptionalAuthGuard)
+  async checkFollowStatus(
+    @CurrentUser() currentUser: User | null,
+    @Param('username') username: string,
+  ): Promise<{ isFollowing: boolean }> {
+    return this.usersService.checkFollowStatus(currentUser, username);
   }
 }
