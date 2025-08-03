@@ -8,6 +8,7 @@ import { PostsModule } from './modules/posts/posts.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { RecipesModule } from './modules/recipes/recipes.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CommentsModule } from './modules/comments/comments.module';
     IngredientsModule,
     ConversationsModule,
     CommentsModule,
+    RecipesModule,
   ],
 })
 export class AppModule {}
