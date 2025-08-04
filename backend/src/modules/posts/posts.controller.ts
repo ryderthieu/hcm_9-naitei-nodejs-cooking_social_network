@@ -45,9 +45,7 @@ export class PostsController {
     @Query() filter: FilterPostsDto,
     @CurrentUser('user') user?: User,
   ) {
-    return user
-      ? this.postsService.getPosts(user.id, filter)
-      : this.postsService.getPosts(filter);
+    return this.postsService.getPosts(filter, user);
   }
 
   @Put(':postId')

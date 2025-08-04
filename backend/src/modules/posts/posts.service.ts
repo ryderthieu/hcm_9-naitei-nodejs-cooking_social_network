@@ -10,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MediaType, Post, Recipe, PostMedia, User } from '@prisma/client';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
+import { LIMIT_DEFAULT, OrderBy, PAGE_DEFAULT, SortBy } from 'src/common/constants/pagination.constants';
+
 
 type PostWithIncludes = Post & {
   recipe: Pick<Recipe, 'id' | 'title' | 'slug'>;
@@ -181,26 +183,19 @@ export class PostsService {
     return { post: result };
   }
 
-  async getPosts(query: FilterPostsDto): Promise<MultiplePostResponse>;
   async getPosts(
-    userId: number,
     query: FilterPostsDto,
-  ): Promise<MultiplePostResponse>;
-  async getPosts(
-    userIdOrQuery: number | FilterPostsDto,
-    maybeQuery?: FilterPostsDto,
+    currentUser?: User,
   ): Promise<MultiplePostResponse> {
-    const userId = typeof userIdOrQuery === 'number' ? userIdOrQuery : null;
-    const query =
-      typeof userIdOrQuery === 'number' ? maybeQuery! : userIdOrQuery;
+    const userId = currentUser?.id;
 
     const {
       keyword,
       following = false,
       savedBy = false,
-      sortBy = 'newest',
-      page = 1,
-      limit = 10,
+      sortBy = SortBy.NEWEST,
+      page = PAGE_DEFAULT,
+      limit = LIMIT_DEFAULT,
     } = query;
 
     const skip = (page - 1) * limit;
@@ -232,7 +227,9 @@ export class PostsService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: sortBy === 'newest' ? 'desc' : 'asc' },
+        orderBy: {
+          createdAt: sortBy === SortBy.NEWEST ? OrderBy.DESC : OrderBy.ASC,
+        },
         include: {
           media: true,
           recipe: { select: { id: true, title: true, slug: true } },
@@ -291,11 +288,6 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('Post not found');
     if (post.authorId !== userId) throw new ForbiddenException('Access denied');
-
-    await this.prisma.postLike.deleteMany({ where: { postId } });
-    await this.prisma.userSavedPost.deleteMany({ where: { postId } });
-    await this.prisma.postComment.deleteMany({ where: { postId } });
-    await this.prisma.postMedia.deleteMany({ where: { postId } });
 
     await this.prisma.post.delete({ where: { id: postId } });
     return { message: 'Post deleted successfully' };
