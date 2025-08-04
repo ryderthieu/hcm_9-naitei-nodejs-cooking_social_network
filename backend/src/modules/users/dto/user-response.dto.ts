@@ -42,8 +42,8 @@ export class UserResponseDto {
   constructor(partial: Partial<UserResponseDto> & { _count?: any }) {
     Object.assign(this, partial);
 
-    this.followers = partial._count?.followers ?? 0;
-    this.followings = partial._count?.following ?? 0;
+    this.followers = partial._count?.following ?? 0; 
+    this.followings = partial._count?.followers ?? 0; 
     this.avatar = partial.avatar || undefined;
     this.bio = partial.bio || undefined;
     this.gender = this.mapGender(partial.gender);
