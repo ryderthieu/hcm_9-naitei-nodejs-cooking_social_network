@@ -22,8 +22,8 @@ export interface VerifyOtpDto {
 
 export interface ResetPasswordDto {
   email: string;
-  otp: string;
   password: string;
+  confirmPassword: string;
 }
 
 export interface LoginErrors {

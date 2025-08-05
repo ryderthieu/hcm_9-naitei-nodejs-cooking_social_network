@@ -63,8 +63,8 @@ export async function resetPassword(resetPasswordDto: ResetPasswordDto) {
   try {
     const response = await post("/auth/reset-password", {
       email: resetPasswordDto.email,
-      otp: resetPasswordDto.otp,
       password: resetPasswordDto.password,
+      confirmPassword: resetPasswordDto.confirmPassword,
     });
     return response.data;
   } catch (error) {
