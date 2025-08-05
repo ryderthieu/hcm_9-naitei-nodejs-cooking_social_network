@@ -7,6 +7,7 @@ import { EmailModule } from './modules/email/email.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
+import { CommentsModule } from './modules/comments/comments.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
     EmailModule,
     PostsModule,
     IngredientsModule,
-    ConversationsModule
+    ConversationsModule,
+    CommentsModule,
   ],
 })
 export class AppModule {}
