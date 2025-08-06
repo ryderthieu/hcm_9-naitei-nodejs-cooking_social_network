@@ -37,14 +37,20 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { email, password, firstName, lastName, username } = registerDto;
 
-    const persistedUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { username }],
-      },
+    const persistedEmail = await this.prisma.user.findFirst({
+      where: { email },
     });
 
-    if (persistedUser) {
-      throw new BadRequestException('User already exists');
+    if (persistedEmail) {
+      throw new BadRequestException('Email already exists');
+    }
+
+    const persistedUsername = await this.prisma.user.findFirst({
+      where: { username },
+    });
+
+    if (persistedUsername) {
+      throw new BadRequestException('Username already exists');
     }
 
     const hashedPassword = await hashPassword(password);
