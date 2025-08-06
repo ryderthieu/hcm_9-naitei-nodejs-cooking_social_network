@@ -17,6 +17,7 @@ import {
 import { PostComment, User } from '@prisma/client';
 
 type PostCommentWithUser = PostComment & {
+  replyOf?: number;
   user: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar'>;
 };
 
@@ -162,6 +163,7 @@ export class CommentsService {
     return {
       id: comment.id,
       post_id: comment.postId,
+      reply_of: comment.replyOf,
       user: {
         id: comment.user.id,
         first_name: comment.user.firstName,
