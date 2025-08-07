@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
@@ -7,6 +7,6 @@ export class CreateCommentDto {
 
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
-  replyOf?: number;
+  @IsNumber()
+  replyOf: number;
 }
