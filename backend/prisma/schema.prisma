@@ -99,38 +99,38 @@ enum MessageType {
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  email      String    @unique
-  password   String
-  lastName   String
-  firstName  String
-  username   String    @unique
-  gender     Gender?
-  birthday   DateTime?
-  bio        String?
-  slug       String?   @unique
-  avatar     String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  lastName  String
+  firstName String
+  username  String    @unique
+  gender    Gender?
+  birthday  DateTime?
+  bio       String?
+  slug      String?   @unique
+  avatar    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  otps                Otp[]
-  sessions            Session[]
-  savedRecipes        UserSavedRecipe[]
-  savedPosts          UserSavedPost[]
-  followers           Relationship[] @relation("UserFollowers")
-  following           Relationship[] @relation("UserFollowing")
-  authoredRecipes     Recipe[]       @relation("RecipeAuthor")
-  authoredIngredients Ingredient[]   @relation("IngredientAuthor")
-  recipeRatings       RecipeRating[]
-  authoredPosts       Post[]         @relation("PostAuthor")
-  postShares          PostShare[]
-  postLikes           PostLike[]
-  postComments        PostComment[]
-  conversationMembers Member[]
-  sentMessages        Message[]      @relation("MessageSender")
-  seenMessages        Seen[]
-  sentNotifications   Notification[] @relation("NotificationSender")
-  receivedNotifications Notification[] @relation("NotificationReceiver")
+  otps                  Otp[]
+  sessions              Session[]
+  savedRecipes          UserSavedRecipe[]
+  savedPosts            UserSavedPost[]
+  followers             Relationship[]    @relation("UserFollowers")
+  following             Relationship[]    @relation("UserFollowing")
+  authoredRecipes       Recipe[]          @relation("RecipeAuthor")
+  authoredIngredients   Ingredient[]      @relation("IngredientAuthor")
+  recipeRatings         RecipeRating[]
+  authoredPosts         Post[]            @relation("PostAuthor")
+  postShares            PostShare[]
+  postLikes             PostLike[]
+  postComments          PostComment[]
+  conversationMembers   Member[]
+  sentMessages          Message[]         @relation("MessageSender")
+  seenMessages          Seen[]
+  sentNotifications     Notification[]    @relation("NotificationSender")
+  receivedNotifications Notification[]    @relation("NotificationReceiver")
 }
 
 model Otp {
@@ -194,21 +194,21 @@ model Recipe {
   id          Int      @id @default(autoincrement())
   authorId    Int
   title       String
-  slug        String? @unique
+  slug        String?  @unique
   description String?
   time        Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  author              User                @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  savedByUsers        UserSavedRecipe[]
-  ingredients         RecipeIngredient[]
-  steps               RecipeStep[]
-  images              RecipeImage[]
-  utensils            RecipeUtensil[]
-  categories          RecipeCategory?
-  ratings             RecipeRating[]
-  posts               Post[]
+  author       User               @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  savedByUsers UserSavedRecipe[]
+  ingredients  RecipeIngredient[]
+  steps        RecipeStep[]
+  images       RecipeImage[]
+  utensils     RecipeUtensil[]
+  categories   RecipeCategory?
+  ratings      RecipeRating[]
+  posts        Post[]
 }
 
 model Ingredient {
@@ -267,15 +267,15 @@ model RecipeUtensil {
 }
 
 model RecipeCategory {
-  recipeId             Int  @id
-  mealType             MealType?
-  cuisine              Cuisine?
-  occasions            Occasions?
-  dietaryPreferences   DietaryPreferences?
-  mainIngredients      MainIngredients?
-  cookingMethod        CookingMethod?
-  timeBased            TimeBased?
-  difficultyLevel      DifficultyLevel?
+  recipeId           Int                 @id
+  mealType           MealType?
+  cuisine            Cuisine?
+  occasions          Occasions?
+  dietaryPreferences DietaryPreferences?
+  mainIngredients    MainIngredients?
+  cookingMethod      CookingMethod?
+  timeBased          TimeBased?
+  difficultyLevel    DifficultyLevel?
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
@@ -284,7 +284,7 @@ model RecipeRating {
   id        Int      @id @default(autoincrement())
   recipeId  Int
   userId    Int
-  rating    Int      
+  rating    Int
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -305,8 +305,8 @@ model Post {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  author       User           @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  recipe       Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  author       User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipe       Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   savedByUsers UserSavedPost[]
   shares       PostShare[]
   likes        PostLike[]
@@ -337,14 +337,18 @@ model PostLike {
 }
 
 model PostComment {
-  id        Int      @id @default(autoincrement())
-  postId    Int
-  userId    Int
-  comment   String
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  postId       Int
+  replyOf      Int?
+  userId       Int
+  comment      String
+  repliesCount Int      @default(0)
+  createdAt    DateTime @default(now())
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment PostComment?  @relation("CommentReply", fields: [replyOf], references: [id], onDelete: Cascade)
+  replies       PostComment[] @relation("CommentReply")
 }
 
 model PostMedia {

@@ -79,4 +79,13 @@ export class CommentsController {
   ) {
     return this.commentsService.getComments(postId, filter);
   }
+
+  @Get(':commentId/replies')
+  async getReplies(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Query() filter: FilterCommentsDto,
+  ) {
+    return this.commentsService.getReplies(postId, commentId, filter);
+  }
 }

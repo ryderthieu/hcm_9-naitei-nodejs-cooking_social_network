@@ -9,6 +9,7 @@ import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RecipesModule } from './modules/recipes/recipes.module';
     ConversationsModule,
     CommentsModule,
     RecipesModule,
+    MessagesModule,
   ],
 })
 export class AppModule {}

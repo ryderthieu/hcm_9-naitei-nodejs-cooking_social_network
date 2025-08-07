@@ -17,7 +17,6 @@ import {
 import { PostComment, User } from '@prisma/client';
 
 type PostCommentWithUser = PostComment & {
-  replyOf?: number;
   user: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar'>;
 };
 
@@ -33,11 +32,23 @@ export class CommentsService {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('Post not found');
 
+    const parentCommentId = createCommentDto.replyOf ?? null;
+
+    if (parentCommentId) {
+      const parentComment = await this.prisma.postComment.findUnique({
+        where: { id: parentCommentId },
+      });
+      if (!parentComment || parentComment.postId !== postId) {
+        throw new BadRequestException('Invalid parent comment');
+      }
+    }
+
     const comment = await this.prisma.postComment.create({
       data: {
         postId,
         userId,
         comment: createCommentDto.comment,
+        replyOf: parentCommentId,
       },
       include: {
         user: {
@@ -50,6 +61,13 @@ export class CommentsService {
       where: { id: postId },
       data: { commentsCount: { increment: 1 } },
     });
+
+    if (parentCommentId) {
+      await this.prisma.postComment.update({
+        where: { id: parentCommentId },
+        data: { repliesCount: { increment: 1 } },
+      });
+    }
 
     return { comment: this.mapComment(comment) };
   }
@@ -87,7 +105,7 @@ export class CommentsService {
   async deleteComment(userId: number, postId: number, commentId: number) {
     const comment = await this.prisma.postComment.findUnique({
       where: { id: commentId },
-      select: { id: true, postId: true, userId: true },
+      select: { id: true, postId: true, userId: true, replyOf: true },
     });
 
     if (!comment) throw new NotFoundException('Comment not found');
@@ -98,16 +116,26 @@ export class CommentsService {
 
     await this.prisma.postComment.delete({ where: { id: commentId } });
 
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-      select: { commentsCount: true },
+    const updatedCommentsCount = await this.prisma.postComment.count({
+      where: { postId },
     });
 
-    if (post && post.commentsCount > 0) {
-      await this.prisma.post.update({
-        where: { id: postId },
-        data: { commentsCount: { decrement: 1 } },
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { commentsCount: updatedCommentsCount },
+    });
+
+    if (comment.replyOf) {
+      const parent = await this.prisma.postComment.findUnique({
+        where: { id: comment.replyOf },
+        select: { repliesCount: true },
       });
+      if (parent && parent.repliesCount > 0) {
+        await this.prisma.postComment.update({
+          where: { id: comment.replyOf },
+          data: { repliesCount: { decrement: 1 } },
+        });
+      }
     }
 
     return { message: 'Comment deleted successfully' };
@@ -159,11 +187,52 @@ export class CommentsService {
     };
   }
 
+  async getReplies(
+    postId: number,
+    parentCommentId: number,
+    query: FilterCommentsDto,
+  ) {
+    const parentComment = await this.prisma.postComment.findUnique({
+      where: { id: parentCommentId },
+    });
+    if (!parentComment || parentComment.postId !== postId) {
+      throw new BadRequestException('Invalid comment');
+    }
+
+    const sortBy = query.sortBy ?? SortBy.NEWEST;
+    const page = query.page ?? PAGE_DEFAULT;
+    const limit = query.limit ?? LIMIT_DEFAULT;
+    const skip = (page - 1) * limit;
+
+    const [total, replies] = await Promise.all([
+      this.prisma.postComment.count({ where: { replyOf: parentCommentId } }),
+      this.prisma.postComment.findMany({
+        where: { replyOf: parentCommentId },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: sortBy === SortBy.NEWEST ? OrderBy.DESC : OrderBy.ASC,
+        },
+        include: {
+          user: {
+            select: { id: true, firstName: true, lastName: true, avatar: true },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      replies: replies.map(this.mapComment),
+      meta: { total, page, limit },
+    };
+  }
+
   private mapComment(comment: PostCommentWithUser) {
     return {
       id: comment.id,
       post_id: comment.postId,
       reply_of: comment.replyOf,
+      replies_count: comment.repliesCount,
       user: {
         id: comment.user.id,
         first_name: comment.user.firstName,
