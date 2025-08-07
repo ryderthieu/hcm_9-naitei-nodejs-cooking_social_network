@@ -1,22 +1,38 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { GetConversationsQueryDto } from './dto/get-conversations-query.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
-import { PAGE_DEFAULT, LIMIT_DEFAULT, PRIVATE_CHAT_MEMBERS, LAST_MESSAGE_LIMIT } from '../../common/constants/pagination.constants';
+import { AddMembersDto } from './dto/add-members.dto';
+import {
+  PAGE_DEFAULT,
+  LIMIT_DEFAULT,
+  PRIVATE_CHAT_MEMBERS,
+  LAST_MESSAGE_LIMIT,
+} from '../../common/constants/pagination.constants';
 
 @Injectable()
 export class ConversationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createConversation(userId: number, createConversationDto: CreateConversationDto) {
+  async createConversation(
+    userId: number,
+    createConversationDto: CreateConversationDto,
+  ) {
     const { members, name, avatar } = createConversationDto;
 
-    const allMembers = Array.from(new Set([userId, ...members].filter(id => id != null)));
+    const allMembers = Array.from(
+      new Set([userId, ...members].filter((id) => id != null)),
+    );
 
     const validMembers = await this.prisma.user.findMany({
-      where: { id: { in: members } }, 
-      select: { id: true }
+      where: { id: { in: members } },
+      select: { id: true },
     });
 
     if (validMembers.length !== members.length) {
@@ -28,14 +44,14 @@ export class ConversationsService {
         where: {
           members: {
             every: {
-              userId: { in: allMembers }
-            }
+              userId: { in: allMembers },
+            },
           },
-          AND: allMembers.map(memberId => ({
+          AND: allMembers.map((memberId) => ({
             members: {
-              some: { userId: memberId }
-            }
-          }))
+              some: { userId: memberId },
+            },
+          })),
         },
         include: {
           members: {
@@ -44,16 +60,21 @@ export class ConversationsService {
                 select: {
                   id: true,
                   username: true,
-                  avatar: true
-                }
-              }
-            }
-          }
-        }
+                  avatar: true,
+                },
+              },
+            },
+          },
+        },
       });
 
-      if (existingConversation && existingConversation.members.length === PRIVATE_CHAT_MEMBERS) {
-        throw new BadRequestException('Conversation already exists between these users');
+      if (
+        existingConversation &&
+        existingConversation.members.length === PRIVATE_CHAT_MEMBERS
+      ) {
+        throw new BadRequestException(
+          'Conversation already exists between these users',
+        );
       }
     }
 
@@ -63,9 +84,9 @@ export class ConversationsService {
         avatar: avatar || null,
         members: {
           createMany: {
-            data: allMembers.map(memberId => ({ userId: memberId }))
-          }
-        }
+            data: allMembers.map((memberId) => ({ userId: memberId })),
+          },
+        },
       },
       include: {
         members: {
@@ -74,18 +95,18 @@ export class ConversationsService {
               select: {
                 id: true,
                 username: true,
-                avatar: true
-              }
-            }
-          }
-        }
-      }
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    const formattedMembers = newConversation.members.map(member => ({
+    const formattedMembers = newConversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
-      avatar: member.user.avatar
+      avatar: member.user.avatar,
     }));
 
     return {
@@ -96,30 +117,29 @@ export class ConversationsService {
         avatar: newConversation.avatar,
         createdAt: newConversation.createdAt,
         members: formattedMembers,
-        lastMessage: null
+        lastMessage: null,
       },
-      message: 'Conversation created successfully'
+      message: 'Conversation created successfully',
     };
   }
 
-  async getUserConversations(userId: number, queryDto: GetConversationsQueryDto) {
-    const { 
-      page = PAGE_DEFAULT, 
-      limit = LIMIT_DEFAULT, 
-      search 
-    } = queryDto;
+  async getUserConversations(
+    userId: number,
+    queryDto: GetConversationsQueryDto,
+  ) {
+    const { page = PAGE_DEFAULT, limit = LIMIT_DEFAULT, search } = queryDto;
     const skip = (page - 1) * limit;
 
     let whereCondition: any = {
       members: {
-        some: { userId }
-      }
+        some: { userId },
+      },
     };
 
     if (search && search.trim()) {
       whereCondition.name = {
         contains: search.trim(),
-        mode: 'insensitive'
+        mode: 'insensitive',
       };
     }
 
@@ -132,10 +152,10 @@ export class ConversationsService {
               select: {
                 id: true,
                 username: true,
-                avatar: true
-              }
-            }
-          }
+                avatar: true,
+              },
+            },
+          },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -145,19 +165,19 @@ export class ConversationsService {
               select: {
                 id: true,
                 username: true,
-                avatar: true
-              }
+                avatar: true,
+              },
             },
             seenBy: {
               where: { userId },
-              select: { userId: true }
-            }
-          }
-        }
+              select: { userId: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
-      skip
+      skip,
     });
 
     const conversationsWithDetails = await Promise.all(
@@ -169,23 +189,25 @@ export class ConversationsService {
             conversationId: conv.id,
             sender: { not: userId },
             seenBy: {
-              none: { userId }
-            }
-          }
+              none: { userId },
+            },
+          },
         });
 
-        const formattedLastMessage = lastMessage ? {
-          id: lastMessage.id,
-          sender: {
-            id: lastMessage.senderUser.id,
-            username: lastMessage.senderUser.username,
-            avatar: lastMessage.senderUser.avatar
-          },
-          content: lastMessage.content,
-          type: lastMessage.type,
-          createdAt: lastMessage.createdAt,
-          isSeen: lastMessage.seenBy.length > 0
-        } : null;
+        const formattedLastMessage = lastMessage
+          ? {
+              id: lastMessage.id,
+              sender: {
+                id: lastMessage.senderUser.id,
+                username: lastMessage.senderUser.username,
+                avatar: lastMessage.senderUser.avatar,
+              },
+              content: lastMessage.content,
+              type: lastMessage.type,
+              createdAt: lastMessage.createdAt,
+              isSeen: lastMessage.seenBy.length > 0,
+            }
+          : null;
 
         return {
           id: conv.id,
@@ -193,13 +215,13 @@ export class ConversationsService {
           avatar: conv.avatar,
           createdAt: conv.createdAt,
           lastMessage: formattedLastMessage,
-          unreadCount
+          unreadCount,
         };
-      })
+      }),
     );
 
     const totalConversations = await this.prisma.conversation.count({
-      where: whereCondition
+      where: whereCondition,
     });
 
     return {
@@ -208,8 +230,8 @@ export class ConversationsService {
       meta: {
         total: totalConversations,
         page: page,
-        limit: limit
-      }
+        limit: limit,
+      },
     };
   }
 
@@ -223,19 +245,21 @@ export class ConversationsService {
               select: {
                 id: true,
                 username: true,
-                avatar: true
-              }
-            }
-          }
-        }
-      }
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
 
-    const isMember = conversation.members.some(member => member.userId === userId);
+    const isMember = conversation.members.some(
+      (member) => member.userId === userId,
+    );
     if (!isMember) {
       throw new ForbiddenException('Access denied');
     }
@@ -248,34 +272,36 @@ export class ConversationsService {
           select: {
             id: true,
             username: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
         seenBy: {
           where: { userId },
-          select: { userId: true }
-        }
-      }
+          select: { userId: true },
+        },
+      },
     });
 
-    const formattedMembers = conversation.members.map(member => ({
+    const formattedMembers = conversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
-      avatar: member.user.avatar
+      avatar: member.user.avatar,
     }));
 
-    const formattedLastMessage = lastMessage ? {
-      id: lastMessage.id,
-      sender: {
-        id: lastMessage.senderUser.id,
-        username: lastMessage.senderUser.username,
-        avatar: lastMessage.senderUser.avatar
-      },
-      content: lastMessage.content,
-      type: lastMessage.type,
-      createdAt: lastMessage.createdAt,
-      isSeen: lastMessage.seenBy.length > 0
-    } : null;
+    const formattedLastMessage = lastMessage
+      ? {
+          id: lastMessage.id,
+          sender: {
+            id: lastMessage.senderUser.id,
+            username: lastMessage.senderUser.username,
+            avatar: lastMessage.senderUser.avatar,
+          },
+          content: lastMessage.content,
+          type: lastMessage.type,
+          createdAt: lastMessage.createdAt,
+          isSeen: lastMessage.seenBy.length > 0,
+        }
+      : null;
 
     return {
       success: true,
@@ -285,22 +311,28 @@ export class ConversationsService {
         avatar: conversation.avatar,
         createdAt: conversation.createdAt,
         members: formattedMembers,
-        lastMessage: formattedLastMessage
-      }
+        lastMessage: formattedLastMessage,
+      },
     };
   }
 
-  async updateConversation(conversationId: number, userId: number, updateConversationDto: UpdateConversationDto) {
+  async updateConversation(
+    conversationId: number,
+    userId: number,
+    updateConversationDto: UpdateConversationDto,
+  ) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { members: true }
+      include: { members: true },
     });
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
 
-    const isMember = conversation.members.some(member => member.userId === userId);
+    const isMember = conversation.members.some(
+      (member) => member.userId === userId,
+    );
     if (!isMember) {
       throw new ForbiddenException('Permission denied');
     }
@@ -309,7 +341,7 @@ export class ConversationsService {
       where: { id: conversationId },
       data: {
         name: updateConversationDto.name ?? conversation.name,
-        avatar: updateConversationDto.avatar ?? conversation.avatar
+        avatar: updateConversationDto.avatar ?? conversation.avatar,
       },
       include: {
         members: {
@@ -318,12 +350,12 @@ export class ConversationsService {
               select: {
                 id: true,
                 username: true,
-                avatar: true
-              }
-            }
-          }
-        }
-      }
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const lastMessage = await this.prisma.message.findFirst({
@@ -334,34 +366,36 @@ export class ConversationsService {
           select: {
             id: true,
             username: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
         seenBy: {
           where: { userId },
-          select: { userId: true }
-        }
-      }
+          select: { userId: true },
+        },
+      },
     });
 
-    const formattedMembers = updatedConversation.members.map(member => ({
+    const formattedMembers = updatedConversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
-      avatar: member.user.avatar
+      avatar: member.user.avatar,
     }));
 
-    const formattedLastMessage = lastMessage ? {
-      id: lastMessage.id,
-      sender: {
-        id: lastMessage.senderUser.id,
-        username: lastMessage.senderUser.username,
-        avatar: lastMessage.senderUser.avatar
-      },
-      content: lastMessage.content,
-      type: lastMessage.type,
-      createdAt: lastMessage.createdAt,
-      isSeen: lastMessage.seenBy.length > 0
-    } : null;
+    const formattedLastMessage = lastMessage
+      ? {
+          id: lastMessage.id,
+          sender: {
+            id: lastMessage.senderUser.id,
+            username: lastMessage.senderUser.username,
+            avatar: lastMessage.senderUser.avatar,
+          },
+          content: lastMessage.content,
+          type: lastMessage.type,
+          createdAt: lastMessage.createdAt,
+          isSeen: lastMessage.seenBy.length > 0,
+        }
+      : null;
 
     return {
       success: true,
@@ -371,38 +405,230 @@ export class ConversationsService {
         avatar: updatedConversation.avatar,
         createdAt: updatedConversation.createdAt,
         members: formattedMembers,
-        lastMessage: formattedLastMessage
+        lastMessage: formattedLastMessage,
       },
-      message: 'Conversation updated successfully'
+      message: 'Conversation updated successfully',
     };
   }
 
   async deleteConversation(conversationId: number, userId: number) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { members: true }
+      include: { members: true },
     });
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
 
-    const isMember = conversation.members.some(member => member.userId === userId);
+    const isMember = conversation.members.some(
+      (member) => member.userId === userId,
+    );
     if (!isMember) {
-      throw new ForbiddenException('Permission denied to delete this conversation');
+      throw new ForbiddenException(
+        'Permission denied to delete this conversation',
+      );
     }
 
     await this.prisma.message.deleteMany({
-      where: { conversationId: conversation.id }
+      where: { conversationId: conversation.id },
     });
 
     await this.prisma.conversation.delete({
-      where: { id: conversationId }
+      where: { id: conversationId },
     });
 
     return {
       success: true,
-      message: 'Conversation and all messages deleted successfully'
+      message: 'Conversation and all messages deleted successfully',
+    };
+  }
+
+  async addMembers(
+    conversationId: number,
+    userId: number,
+    addMembersDto: AddMembersDto,
+  ) {
+    const { memberIds } = addMembersDto;
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { members: true },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const isMember = conversation.members.some(
+      (member) => member.userId === userId,
+    );
+    if (!isMember) {
+      throw new ForbiddenException('Permission denied');
+    }
+
+    const validUsers = await this.prisma.user.findMany({
+      where: { id: { in: memberIds } },
+      select: { id: true },
+    });
+
+    if (validUsers.length !== memberIds.length) {
+      throw new BadRequestException('Some users do not exist');
+    }
+
+    const existingMemberIds = conversation.members.map((member) => member.userId);
+    const newMemberIds = memberIds.filter((id) => !existingMemberIds.includes(id));
+
+    if (newMemberIds.length === 0) {
+      throw new BadRequestException('All specified users are already members of this conversation');
+    }
+
+    await this.prisma.member.createMany({
+      data: newMemberIds.map((memberId) => ({
+        conversationId,
+        userId: memberId,
+      })),
+    });
+
+    const updatedConversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!updatedConversation) {
+      throw new NotFoundException('Conversation not found after update');
+    }
+
+    const formattedMembers = updatedConversation.members.map((member) => ({
+      id: member.user.id,
+      username: member.user.username,
+      avatar: member.user.avatar,
+    }));
+
+    return {
+      success: true,
+      conversation: {
+        id: updatedConversation.id,
+        name: updatedConversation.name,
+        avatar: updatedConversation.avatar,
+        createdAt: updatedConversation.createdAt,
+        members: formattedMembers,
+      },
+      message: `${newMemberIds.length} member(s) added successfully`,
+    };
+  }
+
+  async deleteMember(conversationId: number, userId: number, memberId: number) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { members: true },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const isMember = conversation.members.some(
+      (member) => member.userId === userId,
+    );
+    if (!isMember) {
+      throw new ForbiddenException('Permission denied');
+    }
+
+    const memberToRemove = conversation.members.find(
+      (member) => member.userId === memberId,
+    );
+    if (!memberToRemove) {
+      throw new BadRequestException(
+        'User is not a member of this conversation',
+      );
+    }
+
+    if (
+      conversation.members.length === PRIVATE_CHAT_MEMBERS &&
+      userId === memberId
+    ) {
+      throw new BadRequestException(
+        'Cannot remove yourself from a private conversation. Delete the conversation instead.',
+      );
+    }
+
+    await this.prisma.member.delete({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId: memberId,
+        },
+      },
+    });
+
+    const remainingMembers = await this.prisma.member.count({
+      where: { conversationId },
+    });
+
+    if (remainingMembers === 0) {
+      await this.prisma.message.deleteMany({
+        where: { conversationId },
+      });
+      await this.prisma.conversation.delete({
+        where: { id: conversationId },
+      });
+
+      return {
+        success: true,
+        message: 'Member removed and conversation deleted as no members remain',
+      };
+    }
+
+    const updatedConversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!updatedConversation) {
+      throw new NotFoundException('Conversation not found after update');
+    }
+
+    const formattedMembers = updatedConversation.members.map((member) => ({
+      id: member.user.id,
+      username: member.user.username,
+      avatar: member.user.avatar,
+    }));
+
+    return {
+      success: true,
+      conversation: {
+        id: updatedConversation.id,
+        name: updatedConversation.name,
+        avatar: updatedConversation.avatar,
+        createdAt: updatedConversation.createdAt,
+        members: formattedMembers,
+      },
+      message: 'Member removed successfully',
     };
   }
 }

@@ -16,6 +16,7 @@ import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { GetConversationsQueryDto } from './dto/get-conversations-query.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { AddMembersDto } from './dto/add-members.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '@prisma/client';
@@ -69,5 +70,24 @@ export class ConversationsController {
     @CurrentUser('user') user: User
   ) {
     return this.conversationsService.deleteConversation(conversationId, user.id);
+  }
+
+  @Post(':conversationId/members')
+  @HttpCode(HttpStatus.CREATED)
+  async addMembers(
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @CurrentUser('user') user: User,
+    @Body() addMembersDto: AddMembersDto
+  ) {
+    return this.conversationsService.addMembers(conversationId, user.id, addMembersDto);
+  }
+
+  @Delete(':conversationId/member/:memberId')
+  async deleteMember(
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Param('memberId', ParseIntPipe) memberId: number,
+    @CurrentUser('user') user: User
+  ) {
+    return this.conversationsService.deleteMember(conversationId, user.id, memberId);
   }
 }
