@@ -126,6 +126,7 @@ model User {
   postShares            PostShare[]
   postLikes             PostLike[]
   postComments          PostComment[]
+  commentLikes          CommentLike[]
   conversationMembers   Member[]
   sentMessages          Message[]         @relation("MessageSender")
   seenMessages          Seen[]
@@ -343,12 +344,14 @@ model PostComment {
   userId       Int
   comment      String
   repliesCount Int      @default(0)
+  likesCount   Int      @default(0)
   createdAt    DateTime @default(now())
 
   post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   parentComment PostComment?  @relation("CommentReply", fields: [replyOf], references: [id], onDelete: Cascade)
   replies       PostComment[] @relation("CommentReply")
+  likes         CommentLike[]
 }
 
 model PostMedia {
@@ -358,6 +361,17 @@ model PostMedia {
   type   MediaType
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model CommentLike {
+  userId    Int
+  commentId Int
+  createdAt DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
 }
 
 model Conversation {

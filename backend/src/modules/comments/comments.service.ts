@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -227,12 +228,72 @@ export class CommentsService {
     };
   }
 
+  async likeComment(userId: number, postId: number, commentId: number) {
+    const comment = await this.prisma.postComment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment || comment.postId !== postId)
+      throw new BadRequestException('Invalid comment');
+
+    const existing = await this.prisma.commentLike.findUnique({
+      where: { userId_commentId: { userId, commentId } },
+    });
+    if (existing) throw new BadRequestException('Already liked');
+
+    try {
+      await this.prisma.$transaction([
+        this.prisma.commentLike.create({
+          data: { userId, commentId },
+        }),
+        this.prisma.postComment.update({
+          where: { id: commentId },
+          data: { likesCount: { increment: 1 } },
+        }),
+      ]);
+    } catch (error) {
+      throw new InternalServerErrorException('Unable to like the comment. Try again later!');
+    }
+
+    return { message: 'Comment liked' };
+  }
+
+  async unlikeComment(userId: number, postId: number, commentId: number) {
+    const comment = await this.prisma.postComment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment || comment.postId !== postId)
+      throw new BadRequestException('Invalid comment');
+
+    const existing = await this.prisma.commentLike.findUnique({
+      where: { userId_commentId: { userId, commentId } },
+    });
+    if (!existing)
+      throw new BadRequestException('You have not liked this comment');
+
+    try {
+      await this.prisma.$transaction([
+        this.prisma.commentLike.delete({
+          where: { userId_commentId: { userId, commentId } },
+        }),
+        this.prisma.postComment.update({
+          where: { id: commentId },
+          data: { likesCount: { decrement: 1 } },
+        }),
+      ]);
+    } catch (error) {
+      throw new InternalServerErrorException('Unable to unlike the comment. Try again later!');
+    }
+
+    return { message: 'Comment unliked' };
+  }
+
   private mapComment(comment: PostCommentWithUser) {
     return {
       id: comment.id,
       post_id: comment.postId,
       reply_of: comment.replyOf,
       replies_count: comment.repliesCount,
+      likes_count: comment.likesCount,
       user: {
         id: comment.user.id,
         first_name: comment.user.firstName,
