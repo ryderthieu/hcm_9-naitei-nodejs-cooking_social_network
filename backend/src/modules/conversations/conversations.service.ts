@@ -61,6 +61,8 @@ export class ConversationsService {
                   id: true,
                   username: true,
                   avatar: true,
+                  firstName: true,
+                  lastName: true,
                 },
               },
             },
@@ -96,6 +98,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -107,6 +111,8 @@ export class ConversationsService {
       id: member.user.id,
       username: member.user.username,
       avatar: member.user.avatar,
+      firstName: member.user.firstName,
+      lastName: member.user.lastName,
     }));
 
     return {
@@ -153,6 +159,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -166,6 +174,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
             seenBy: {
@@ -201,6 +211,8 @@ export class ConversationsService {
                 id: lastMessage.senderUser.id,
                 username: lastMessage.senderUser.username,
                 avatar: lastMessage.senderUser.avatar,
+                firstName: lastMessage.senderUser.firstName,
+                lastName: lastMessage.senderUser.lastName,
               },
               content: lastMessage.content,
               type: lastMessage.type,
@@ -213,6 +225,13 @@ export class ConversationsService {
           id: conv.id,
           name: conv.name,
           avatar: conv.avatar,
+          members: conv.members.map((member) => ({
+            id: member.user.id,
+            username: member.user.username,
+            avatar: member.user.avatar,
+            firstName: member.user.firstName,
+            lastName: member.user.lastName,
+          })),
           createdAt: conv.createdAt,
           lastMessage: formattedLastMessage,
           unreadCount,
@@ -246,6 +265,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -263,29 +284,41 @@ export class ConversationsService {
     if (!isMember) {
       throw new ForbiddenException('Access denied');
     }
-
-    const lastMessage = await this.prisma.message.findFirst({
-      where: { conversationId: conversation.id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        senderUser: {
-          select: {
-            id: true,
-            username: true,
-            avatar: true,
+    const [lastMessage, unreadCount] = await Promise.all([
+      this.prisma.message.findFirst({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          senderUser: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          seenBy: {
+            where: { userId },
+            select: { userId: true },
           },
         },
-        seenBy: {
-          where: { userId },
-          select: { userId: true },
+      }),
+      this.prisma.message.count({
+        where: {
+          conversationId: conversation.id,
+          sender: { not: userId },
+          seenBy: { none: { userId } },
         },
-      },
-    });
+      }),
+    ]);
 
     const formattedMembers = conversation.members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
       avatar: member.user.avatar,
+      firstName: member.user.firstName,
+      lastName: member.user.lastName,
     }));
 
     const formattedLastMessage = lastMessage
@@ -295,6 +328,8 @@ export class ConversationsService {
             id: lastMessage.senderUser.id,
             username: lastMessage.senderUser.username,
             avatar: lastMessage.senderUser.avatar,
+            firstName: lastMessage.senderUser.firstName,
+            lastName: lastMessage.senderUser.lastName,
           },
           content: lastMessage.content,
           type: lastMessage.type,
@@ -312,6 +347,7 @@ export class ConversationsService {
         createdAt: conversation.createdAt,
         members: formattedMembers,
         lastMessage: formattedLastMessage,
+        unreadCount,
       },
     };
   }
@@ -351,6 +387,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -367,6 +405,8 @@ export class ConversationsService {
             id: true,
             username: true,
             avatar: true,
+            firstName: true,
+            lastName: true,
           },
         },
         seenBy: {
@@ -389,6 +429,8 @@ export class ConversationsService {
             id: lastMessage.senderUser.id,
             username: lastMessage.senderUser.username,
             avatar: lastMessage.senderUser.avatar,
+            firstName: lastMessage.senderUser.firstName,
+            lastName: lastMessage.senderUser.lastName,
           },
           content: lastMessage.content,
           type: lastMessage.type,
@@ -476,11 +518,17 @@ export class ConversationsService {
       throw new BadRequestException('Some users do not exist');
     }
 
-    const existingMemberIds = conversation.members.map((member) => member.userId);
-    const newMemberIds = memberIds.filter((id) => !existingMemberIds.includes(id));
+    const existingMemberIds = conversation.members.map(
+      (member) => member.userId,
+    );
+    const newMemberIds = memberIds.filter(
+      (id) => !existingMemberIds.includes(id),
+    );
 
     if (newMemberIds.length === 0) {
-      throw new BadRequestException('All specified users are already members of this conversation');
+      throw new BadRequestException(
+        'All specified users are already members of this conversation',
+      );
     }
 
     await this.prisma.member.createMany({
@@ -500,6 +548,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -515,6 +565,8 @@ export class ConversationsService {
       id: member.user.id,
       username: member.user.username,
       avatar: member.user.avatar,
+      firstName: member.user.firstName,
+      lastName: member.user.lastName,
     }));
 
     return {
@@ -602,6 +654,8 @@ export class ConversationsService {
                 id: true,
                 username: true,
                 avatar: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -617,6 +671,8 @@ export class ConversationsService {
       id: member.user.id,
       username: member.user.username,
       avatar: member.user.avatar,
+      firstName: member.user.firstName,
+      lastName: member.user.lastName,
     }));
 
     return {
