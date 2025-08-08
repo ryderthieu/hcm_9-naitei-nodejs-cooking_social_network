@@ -8,6 +8,7 @@ import { PostsModule } from './modules/posts/posts.module';
 import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { RecipesModule } from './modules/recipes/recipes.module';
 import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { MessagesModule } from './modules/messages/messages.module';
     IngredientsModule,
     ConversationsModule,
     CommentsModule,
+    RecipesModule,
     MessagesModule,
   ],
 })
