@@ -19,10 +19,13 @@ describe('ConversationsService', () => {
     },
     user: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
     member: {
       createMany: jest.fn(),
+      create: jest.fn(),
       delete: jest.fn(),
+      count: jest.fn(),
     },
     message: {
       count: jest.fn(),
@@ -313,6 +316,260 @@ describe('ConversationsService', () => {
       await expect(
         service.deleteConversation(conversationId, userId)
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('addMembers', () => {
+    const conversationId = 1;
+    const userId = 1;
+    const addMembersDto = { memberIds: [2, 3] };
+
+    it('should add multiple members to conversation successfully', async () => {
+      const mockConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        avatar: null,
+        members: [{ userId: 1 }],
+      };
+
+      const mockValidUsers = [
+        { id: 2 },
+        { id: 3 },
+      ];
+
+      const mockUpdatedConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        avatar: null,
+        createdAt: new Date(),
+        members: [
+          { user: { id: 1, username: 'testuser', avatar: 'avatar.jpg' } },
+          { user: { id: 2, username: 'newuser1', avatar: 'avatar2.jpg' } },
+          { user: { id: 3, username: 'newuser2', avatar: 'avatar3.jpg' } },
+        ],
+      };
+
+      mockPrismaService.conversation.findUnique
+        .mockResolvedValueOnce(mockConversation)
+        .mockResolvedValueOnce(mockUpdatedConversation);
+      mockPrismaService.user.findMany.mockResolvedValue(mockValidUsers);
+      mockPrismaService.member.createMany.mockResolvedValue({});
+
+      const result = await service.addMembers(conversationId, userId, addMembersDto);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('2 member(s) added successfully');
+      expect(result.conversation.members).toHaveLength(3);
+      expect(mockPrismaService.member.createMany).toHaveBeenCalledWith({
+        data: [
+          { conversationId, userId: 2 },
+          { conversationId, userId: 3 },
+        ],
+      });
+    });
+
+    it('should throw NotFoundException if conversation does not exist', async () => {
+      mockPrismaService.conversation.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.addMembers(conversationId, userId, addMembersDto)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if user is not a member', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 3 }], // different user
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+
+      await expect(
+        service.addMembers(conversationId, userId, addMembersDto)
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if some users do not exist', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 1 }],
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+      mockPrismaService.user.findMany.mockResolvedValue([{ id: 2 }]); // only one user found
+
+      await expect(
+        service.addMembers(conversationId, userId, addMembersDto)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if all users are already members', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 1 }, { userId: 2 }, { userId: 3 }], // all already members
+      };
+
+      const mockValidUsers = [
+        { id: 2 },
+        { id: 3 },
+      ];
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+      mockPrismaService.user.findMany.mockResolvedValue(mockValidUsers);
+
+      await expect(
+        service.addMembers(conversationId, userId, addMembersDto)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should only add new members (filter out existing ones)', async () => {
+      const mockConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        avatar: null,
+        members: [{ userId: 1 }, { userId: 2 }], // user 2 already exists
+      };
+
+      const mockValidUsers = [
+        { id: 2 },
+        { id: 3 },
+      ];
+
+      const mockUpdatedConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        avatar: null,
+        createdAt: new Date(),
+        members: [
+          { user: { id: 1, username: 'testuser', avatar: 'avatar.jpg' } },
+          { user: { id: 2, username: 'existinguser', avatar: 'avatar2.jpg' } },
+          { user: { id: 3, username: 'newuser', avatar: 'avatar3.jpg' } },
+        ],
+      };
+
+      mockPrismaService.conversation.findUnique
+        .mockResolvedValueOnce(mockConversation)
+        .mockResolvedValueOnce(mockUpdatedConversation);
+      mockPrismaService.user.findMany.mockResolvedValue(mockValidUsers);
+      mockPrismaService.member.createMany.mockResolvedValue({});
+
+      const result = await service.addMembers(conversationId, userId, addMembersDto);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('1 member(s) added successfully'); // only 1 new member
+      expect(mockPrismaService.member.createMany).toHaveBeenCalledWith({
+        data: [
+          { conversationId, userId: 3 }, // only user 3 is new
+        ],
+      });
+    });
+  });
+
+  describe('deleteMember', () => {
+    const conversationId = 1;
+    const userId = 1;
+    const memberId = 2;
+
+    it('should remove member from conversation successfully', async () => {
+      const mockConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        members: [{ userId: 1 }, { userId: 2 }, { userId: 3 }], // 3 members
+      };
+
+      const mockUpdatedConversation = {
+        id: 1,
+        name: 'Test Conversation',
+        avatar: null,
+        createdAt: new Date(),
+        members: [
+          { user: { id: 1, username: 'user1', avatar: 'avatar1.jpg' } },
+          { user: { id: 3, username: 'user3', avatar: 'avatar3.jpg' } },
+        ],
+      };
+
+      mockPrismaService.conversation.findUnique
+        .mockResolvedValueOnce(mockConversation)
+        .mockResolvedValueOnce(mockUpdatedConversation);
+      mockPrismaService.member.delete.mockResolvedValue({});
+      mockPrismaService.member.count.mockResolvedValue(2); // remaining members
+
+      const result = await service.deleteMember(conversationId, userId, memberId);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Member removed successfully');
+      expect(result.conversation?.members).toHaveLength(2);
+      expect(mockPrismaService.member.delete).toHaveBeenCalledWith({
+        where: { conversationId_userId: { conversationId, userId: memberId } },
+      });
+    });
+
+    it('should delete conversation when no members remain', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 1 }], // only one member
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+      mockPrismaService.member.delete.mockResolvedValue({});
+      mockPrismaService.member.count.mockResolvedValue(0); // no remaining members
+      mockPrismaService.message.deleteMany.mockResolvedValue({});
+      mockPrismaService.conversation.delete.mockResolvedValue({});
+
+      const result = await service.deleteMember(conversationId, userId, userId); // removing self
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Member removed and conversation deleted as no members remain');
+      expect(mockPrismaService.conversation.delete).toHaveBeenCalledWith({
+        where: { id: conversationId },
+      });
+    });
+
+    it('should throw NotFoundException if conversation does not exist', async () => {
+      mockPrismaService.conversation.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.deleteMember(conversationId, userId, memberId)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if user is not a member', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 3 }], // different user
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+
+      await expect(
+        service.deleteMember(conversationId, userId, memberId)
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException if member to remove is not in conversation', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 1 }, { userId: 3 }], // memberId 2 not in conversation
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+
+      await expect(
+        service.deleteMember(conversationId, userId, memberId)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when trying to remove self from private conversation', async () => {
+      const mockConversation = {
+        id: 1,
+        members: [{ userId: 1 }, { userId: 2 }], // exactly 2 members (private chat)
+      };
+
+      mockPrismaService.conversation.findUnique.mockResolvedValue(mockConversation);
+
+      await expect(
+        service.deleteMember(conversationId, userId, userId) // removing self
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
