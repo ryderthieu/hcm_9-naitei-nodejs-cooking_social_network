@@ -32,10 +32,12 @@ export interface LoginErrors {
 }
 
 export interface User {
+  id: number;
   email: string;
   username: string;
   firstName: string;
   lastName: string;
+  avatar?: string | null;
 }
 
 export interface AuthContextProps {

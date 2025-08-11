@@ -112,8 +112,20 @@ export class CommentsService {
     if (!comment) throw new NotFoundException('Comment not found');
     if (comment.postId !== postId)
       throw new BadRequestException('Invalid post');
-    if (comment.userId !== userId)
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true },
+    });
+
+    if (!post) throw new NotFoundException('Post not found');
+
+    const isCommentOwner = comment.userId === userId;
+    const isPostOwner = post.authorId === userId;
+
+    if (!isCommentOwner && !isPostOwner) {
       throw new ForbiddenException('Access denied');
+    }
 
     await this.prisma.postComment.delete({ where: { id: commentId } });
 
@@ -142,7 +154,7 @@ export class CommentsService {
     return { message: 'Comment deleted successfully' };
   }
 
-  async getCommentById(postId: number, commentId: number) {
+  async getCommentById(postId: number, commentId: number, currentUser?: User) {
     const comment = await this.prisma.postComment.findUnique({
       where: { id: commentId },
       include: {
@@ -156,19 +168,20 @@ export class CommentsService {
     if (comment.postId !== postId)
       throw new BadRequestException('Invalid post');
 
-    return { comment: this.mapComment(comment) };
+    const liked_by_me = await this.getLikedByMeMap(currentUser?.id, [comment.id]);
+    return { comment: this.mapComment(comment, liked_by_me[comment.id]) };
   }
 
-  async getComments(postId: number, query: FilterCommentsDto) {
+  async getComments(postId: number, query: FilterCommentsDto, currentUser?: User) {
     const sortBy = query.sortBy ?? SortBy.NEWEST;
     const page = query.page ?? PAGE_DEFAULT;
     const limit = query.limit ?? LIMIT_DEFAULT;
     const skip = (page - 1) * limit;
 
     const [total, comments] = await Promise.all([
-      this.prisma.postComment.count({ where: { postId } }),
+      this.prisma.postComment.count({ where: { postId, replyOf: null } }),
       this.prisma.postComment.findMany({
-        where: { postId },
+        where: { postId, replyOf: null },
         skip,
         take: limit,
         orderBy: {
@@ -182,8 +195,9 @@ export class CommentsService {
       }),
     ]);
 
+    const likedMap = await this.getLikedByMeMap(currentUser?.id, comments.map(c => c.id));
     return {
-      comments: comments.map(this.mapComment),
+      comments: comments.map(c => this.mapComment(c, likedMap[c.id])),
       meta: { total, page, limit },
     };
   }
@@ -192,6 +206,7 @@ export class CommentsService {
     postId: number,
     parentCommentId: number,
     query: FilterCommentsDto,
+    currentUser?: User,
   ) {
     const parentComment = await this.prisma.postComment.findUnique({
       where: { id: parentCommentId },
@@ -222,8 +237,9 @@ export class CommentsService {
       }),
     ]);
 
+    const likedMap = await this.getLikedByMeMap(currentUser?.id, replies.map(r => r.id));
     return {
-      replies: replies.map(this.mapComment),
+      replies: replies.map(r => this.mapComment(r, likedMap[r.id])),
       meta: { total, page, limit },
     };
   }
@@ -287,8 +303,8 @@ export class CommentsService {
     return { message: 'Comment unliked' };
   }
 
-  private mapComment(comment: PostCommentWithUser) {
-    return {
+  private mapComment(comment: PostCommentWithUser, likedByMe?: boolean) {
+    const base = {
       id: comment.id,
       post_id: comment.postId,
       reply_of: comment.replyOf,
@@ -303,5 +319,21 @@ export class CommentsService {
       comment: comment.comment,
       created_at: comment.createdAt,
     };
+    if (typeof likedByMe !== 'undefined') {
+      return { ...base, liked_by_me: likedByMe };
+    }
+    return base;
+  }
+
+  private async getLikedByMeMap(userId: number | undefined, ids: number[]) {
+    if (!userId || ids.length === 0) return {} as Record<number, boolean>;
+    const likes = await this.prisma.commentLike.findMany({
+      where: { userId, commentId: { in: ids } },
+      select: { commentId: true },
+    });
+    return likes.reduce((acc, l) => {
+      acc[l.commentId] = true;
+      return acc;
+    }, {} as Record<number, boolean>);
   }
 }
