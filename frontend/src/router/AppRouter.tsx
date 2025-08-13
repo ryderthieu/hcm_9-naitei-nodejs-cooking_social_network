@@ -4,6 +4,10 @@ import NotFound from "../pages/other/NotFound/NotFound";
 import Feed from "../pages/main/Feed/Feed";
 import Register from "../pages/auth/Register/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword/ForgotPassword";
+import MainLayout from "../layouts/MainLayout";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
+import CreateRecipe from "../pages/recipe/CreateRecipe";
 
 export default function AppRouter() {
   return (
@@ -13,6 +17,15 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/" element={<Feed />} />
       <Route path="*" element={<NotFound />} />
+
+      <Route
+        path="/recipes"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <CreateRecipe />
+          </MainLayout>
+        }
+      />
     </Routes>
   );
 }
