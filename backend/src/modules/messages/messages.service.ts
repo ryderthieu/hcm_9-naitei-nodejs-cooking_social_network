@@ -180,32 +180,30 @@ export class MessagesService {
     return conversations;
   }
 
-  async markMessageAsSeen(messageId: number, userId: number) {
-    const seen = await this.prisma.seen.upsert({
+  async markMessageAsSeen(conversationId: number, userId: number) {
+    const unreadMessages = await this.prisma.message.findMany({
       where: {
-        messageId_userId: {
-          messageId,
-          userId,
-        },
-      },
-      update: {},
-      create: {
-        messageId,
-        userId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
-        },
+        conversationId,
+        sender: { not: userId },
+        seenBy: { none: { userId } },
       },
     });
 
-    return seen;
+    const seenMessages = await this.prisma.seen.createMany({
+      data: unreadMessages.map((message) => ({
+        messageId: message.id,
+        userId,
+      })),
+    });
+
+    return seenMessages;
+  }
+
+  async deleteMessage(messageId: number) {
+    const deletedMessage = await this.prisma.message.delete({
+      where: { id: messageId },
+    });
+
+    return deletedMessage;
   }
 }
