@@ -10,6 +10,7 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
 import { CommentsModule } from './modules/comments/comments.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MessagesModule } from './modules/messages/messages.module';
     CommentsModule,
     RecipesModule,
     MessagesModule,
+    CloudinaryModule,
   ],
 })
 export class AppModule {}
