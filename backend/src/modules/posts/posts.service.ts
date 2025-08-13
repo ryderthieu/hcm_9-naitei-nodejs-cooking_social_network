@@ -10,8 +10,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MediaType, Post, Recipe, PostMedia, User } from '@prisma/client';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
-import { LIMIT_DEFAULT, OrderBy, PAGE_DEFAULT, SortBy } from 'src/common/constants/pagination.constants';
-
+import {
+  LIMIT_DEFAULT,
+  OrderBy,
+  PAGE_DEFAULT,
+  SortBy,
+} from 'src/common/constants/pagination.constants';
 
 type PostWithIncludes = Post & {
   recipe: Pick<Recipe, 'id' | 'title' | 'slug'>;
@@ -327,5 +331,52 @@ export class PostsService {
       data: { likesCount: { decrement: 1 } },
     });
     return { message: 'Post unliked' };
+  }
+
+  async sharePost(userId: number, postId: number) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
+    await this.prisma.$transaction([
+      this.prisma.postShare.create({ data: { postId, userId } }),
+      this.prisma.post.update({
+        where: { id: postId },
+        data: { sharesCount: { increment: 1 } },
+      }),
+    ]);
+
+    return { message: 'Post shared' };
+  }
+
+  async savePost(userId: number, postId: number) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const alreadySaved = await this.prisma.userSavedPost.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
+    if (alreadySaved)
+      throw new BadRequestException('You have already saved this post');
+
+    await this.prisma.userSavedPost.create({ data: { userId, postId } });
+
+    return { message: 'Post saved' };
+  }
+
+  async unsavePost(userId: number, postId: number) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const alreadySaved = await this.prisma.userSavedPost.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
+    if (!alreadySaved)
+      throw new BadRequestException('You have not saved this post');
+
+    await this.prisma.userSavedPost.delete({
+      where: { userId_postId: { userId, postId } },
+    });
+
+    return { message: 'Post unsaved' };
   }
 }

@@ -87,4 +87,34 @@ export class PostsController {
   ) {
     return this.postsService.unlikePost(user.id, postId);
   }
+
+  @Post(':postId/share')
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(200)
+  async share(
+    @Param('postId', ParseIntPipe) postId: number,
+    @CurrentUser('user') user: User,
+  ) {
+    return this.postsService.sharePost(user.id, postId);
+  }
+
+  @Post(':postId/save')
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(200)
+  async save(
+    @Param('postId', ParseIntPipe) postId: number,
+    @CurrentUser('user') user: User,
+  ) {
+    return this.postsService.savePost(user.id, postId);
+  }
+
+  @Delete(':postId/save')
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(200)
+  async unsave(
+    @Param('postId', ParseIntPipe) postId: number,
+    @CurrentUser('user') user: User,
+  ) {
+    return this.postsService.unsavePost(user.id, postId);
+  }
 }
