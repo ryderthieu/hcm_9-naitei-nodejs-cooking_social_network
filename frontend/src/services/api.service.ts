@@ -6,26 +6,31 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import axios from "axios";
+import {
+  API_CONSTANTS,
+  HTTP_STATUS,
+  STORAGE_KEYS,
+  API_ERROR_MESSAGES,
+} from "../constants/constants";
 
-let accessToken: string | null = null;
+let accessToken: string | null = (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) : null);
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: any) => void;
   reject: (reason?: any) => void;
 }> = [];
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3000/api";
-
 const api: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_CONSTANTS.BASE_URL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: API_CONSTANTS.TIMEOUT,
 });
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    const token = getAccessToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -44,7 +49,7 @@ api.interceptors.response.use(
     };
 
     if (
-      error.response?.status === 401 &&
+      error.response?.status === HTTP_STATUS.UNAUTHORIZED &&
       originalRequest &&
       !originalRequest._retry
     ) {
@@ -98,9 +103,9 @@ api.interceptors.response.use(
 
 async function refreshAccessToken(): Promise<AxiosResponse> {
   const refreshInstance = axios.create({
-    baseURL: BASE_URL,
+    baseURL: API_CONSTANTS.BASE_URL,
     withCredentials: true,
-    timeout: 5000,
+    timeout: API_CONSTANTS.REFRESH_TIMEOUT,
   });
 
   return refreshInstance.post("/auth/refresh");
@@ -121,13 +126,13 @@ function processQueue(error: any, token: string | null): void {
 export function setAccessToken(token: string): void {
   accessToken = token;
   if (typeof window !== "undefined") {
-    localStorage.setItem("accessToken", token);
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
   }
 }
 
 export function getAccessToken(): string | null {
   if (!accessToken && typeof window !== "undefined") {
-    accessToken = localStorage.getItem("accessToken");
+    accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   }
   return accessToken;
 }
@@ -135,8 +140,8 @@ export function getAccessToken(): string | null {
 export function clearAuth(): void {
   accessToken = null;
   if (typeof window !== "undefined") {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("userInfo");
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
   }
 }
 
@@ -218,46 +223,23 @@ export async function del<T = any>(
   }
 }
 
-export async function uploadFile<T = any>(
-  url: string,
-  file: File,
-  onUploadProgress?: (progressEvent: any) => void
-): Promise<ApiResponse<T>> {
-  const formData = new FormData();
-  formData.append("file", file);
 
-  try {
-    const response = await api.post(url, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      onUploadProgress,
-    });
-    return {
-      data: response.data,
-      status: response.status,
-      message: response.data?.message,
-    };
-  } catch (error: any) {
-    throw handleError(error);
-  }
-}
 
 function handleError(error: any): ApiError {
   if (error.response) {
     return {
-      message: error.response.data?.message || "An error occured from server",
+      message: error.response.data?.message || API_ERROR_MESSAGES.SERVER_ERROR,
       status: error.response.status,
       errors: error.response.data?.errors,
     };
   } else if (error.request) {
     return {
-      message: "Cannot connect to server",
+      message: API_ERROR_MESSAGES.CONNECTION_ERROR,
       status: 0,
     };
   } else {
     return {
-      message: error.message || "An error occured",
+      message: error.message || API_ERROR_MESSAGES.GENERAL_ERROR,
       status: 0,
     };
   }
