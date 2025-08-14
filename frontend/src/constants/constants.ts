@@ -1,5 +1,3 @@
-
-
 export const UI_CONSTANTS = {
   SEARCH_DEBOUNCE_DELAY: 300,
   DROPDOWN_MAX_HEIGHT: 64,
@@ -14,8 +12,7 @@ export const LOADING_MESSAGES = {
   LOADING: "Đang tải...",
 } as const;
 
-export const PLACEHOLDER_TEXTS = {
-} as const;
+export const PLACEHOLDER_TEXTS = {} as const;
 
 export const LABELS = {
   NO_POSTS: "Chưa có bài viết nào",
@@ -59,4 +56,5 @@ export const API_ERROR_MESSAGES = {
   GENERAL_ERROR: "An error occured",
 } as const;
 
-
+export const DEFAULT_AVATAR_URL =
+  "https://res.cloudinary.com/dfaq5hbmx/image/upload/v1749033098/general/bseoimm2ya0utf2duyyu.png";

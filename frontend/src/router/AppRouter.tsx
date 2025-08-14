@@ -8,6 +8,7 @@ import MainLayout from "../layouts/MainLayout";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import CreateRecipe from "../pages/recipe/CreateRecipe";
+import MessagePage from "../pages/main/Message/MessagePage";
 
 export default function AppRouter() {
   return (
@@ -17,7 +18,8 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/" element={<Feed />} />
       <Route path="*" element={<NotFound />} />
-
+      <Route path="/messages" element={<MessagePage />} />
+      <Route path="/messages/:conversationId" element={<MessagePage />} />
       <Route
         path="/create-recipe"
         element={

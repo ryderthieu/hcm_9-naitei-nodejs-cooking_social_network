@@ -42,6 +42,7 @@ export interface User {
 
 export interface AuthContextProps {
   user: User | null;
+  loading: boolean;
   login: (loginDto: LoginDto) => Promise<void>;
   logout: () => void;
 }
