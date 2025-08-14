@@ -19,7 +19,7 @@ export default function AppRouter() {
       <Route path="*" element={<NotFound />} />
 
       <Route
-        path="/recipes"
+        path="/create-recipe"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <CreateRecipe />
