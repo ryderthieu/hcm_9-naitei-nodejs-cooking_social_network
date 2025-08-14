@@ -40,3 +40,45 @@ export interface CreateRecipeDto {
   utensils: UtensilDto[];
   categories?: CategoryDto;
 }
+
+export interface UpdateRecipeDto {
+  title?: string;
+  description?: string;
+  time?: number;
+  ingredients?: IngredientDto[];
+  steps?: StepDto[];
+  images?: ImageDto[];
+  utensils?: UtensilDto[];
+  categories?: CategoryDto;
+}
+
+export interface QueryRecipesDto {
+  name?: string;
+  mealType?: string;
+  cuisine?: string;
+  occasions?: string;
+  dietaryPreferences?: string;
+  mainIngredient?: string;
+  cookingMethod?: string;
+  timeBased?: string;
+  level?: string;
+  savedBy?: string;
+  limit?: number;
+  page?: number;
+}
+
+export interface CreateRatingDto {
+  rating: number;
+  comment?: string;
+}
+
+export interface UpdateRatingDto {
+  rating?: number;
+  comment?: string;
+}
+
+export interface QueryRatingDto {
+  rating?: number;
+  limit?: number;
+  page?: number;
+}
