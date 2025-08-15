@@ -1,7 +1,10 @@
-export const handleError = (error: any, defaultMessage: string = "Đã xảy ra lỗi. Vui lòng thử lại!") => {
+export const handleError = (
+  error: any,
+  defaultMessage: string = "Đã xảy ra lỗi. Vui lòng thử lại!"
+) => {
   console.error("Error:", error);
-  
-  if (error && typeof error === 'object') {
+
+  if (error && typeof error === "object") {
     if (error.message) {
       return error.message;
     }
@@ -15,11 +18,14 @@ export const handleError = (error: any, defaultMessage: string = "Đã xảy ra 
       return "Bạn cần đăng nhập để thực hiện thao tác này.";
     }
   }
-  
+
   return defaultMessage;
 };
 
-export const showErrorAlert = (error: any, defaultMessage: string = "Đã xảy ra lỗi. Vui lòng thử lại!") => {
+export const showErrorAlert = (
+  error: any,
+  defaultMessage: string = "Đã xảy ra lỗi. Vui lòng thử lại!"
+) => {
   const message = handleError(error, defaultMessage);
   alert(message);
 };

@@ -13,7 +13,10 @@ import {
   API_ERROR_MESSAGES,
 } from "../constants/constants";
 
-let accessToken: string | null = (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) : null);
+let accessToken: string | null =
+  typeof window !== "undefined"
+    ? localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)
+    : null;
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: any) => void;
@@ -47,6 +50,20 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    const isBrowser = typeof window !== "undefined";
+    const isOnLoginRoute =
+      isBrowser && window.location.pathname.startsWith("/login");
+    const isAuthEndpoint = (url?: string) =>
+      !!url && (url.startsWith("/auth/") || url.includes("/auth/"));
+
+    if (
+      error.response?.status === HTTP_STATUS.UNAUTHORIZED &&
+      (isOnLoginRoute || isAuthEndpoint(originalRequest?.url))
+    ) {
+      clearAuth();
+      return Promise.reject(error);
+    }
 
     if (
       error.response?.status === HTTP_STATUS.UNAUTHORIZED &&
@@ -87,7 +104,7 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         clearAuth();
 
-        if (typeof window !== "undefined") {
+        if (isBrowser && !isOnLoginRoute) {
           window.location.href = "/login";
         }
 
@@ -222,8 +239,6 @@ export async function del<T = any>(
     throw handleError(error);
   }
 }
-
-
 
 function handleError(error: any): ApiError {
   if (error.response) {
