@@ -17,6 +17,7 @@ export interface PostRecipeRef {
 export interface PostMedia {
   url: string;
   type: MediaType;
+  public_id?: string;
 }
 
 export interface PostEntity {
@@ -66,4 +67,6 @@ export interface FilterPostsDto {
 
 export interface UpdatePostDto {
   caption?: string;
+  media?: PostMedia[];
+  recipeId?: number | null;
 }

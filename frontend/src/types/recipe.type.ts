@@ -82,3 +82,18 @@ export interface QueryRatingDto {
   limit?: number;
   page?: number;
 }
+
+export interface RecipeListItem {
+  id: number;
+  title: string;
+  slug: string;
+  description?: string;
+  author?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}

@@ -370,11 +370,33 @@ export class PostsService {
     if (!post) throw new NotFoundException('Post not found');
     if (post.authorId !== userId) throw new ForbiddenException('Access denied');
 
+    if (updatePostdto.media) {
+      await this.prisma.postMedia.deleteMany({
+        where: { postId },
+      });
+
+      if (updatePostdto.media.length > 0) {
+        await this.prisma.postMedia.createMany({
+          data: updatePostdto.media.map(media => ({
+            postId,
+            url: media.url,
+            type: media.type,
+          })),
+        });
+      }
+    }
+
+    const updateData: any = {
+      caption: updatePostdto.caption ?? post.caption,
+    };
+
+    if (updatePostdto.recipeId !== undefined && updatePostdto.recipeId !== null) {
+      updateData.recipeId = updatePostdto.recipeId;
+    }
+
     const updated = await this.prisma.post.update({
       where: { id: postId },
-      data: {
-        caption: updatePostdto.caption ?? post.caption,
-      },
+      data: updateData,
       include: {
         media: true,
         recipe: { select: { id: true, title: true, slug: true } },
@@ -439,15 +461,23 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('Post not found');
 
-    await this.prisma.$transaction([
-      this.prisma.postShare.create({ data: { postId, userId } }),
-      this.prisma.post.update({
+    try {
+      await this.prisma.postShare.create({ data: { postId, userId } });
+      const updatedPost = await this.prisma.post.update({
         where: { id: postId },
         data: { sharesCount: { increment: 1 } },
-      }),
-    ]);
-
-    return { message: 'Post shared' };
+      });
+      return { message: 'Post shared', sharesCount: updatedPost.sharesCount };
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        const updatedPost = await this.prisma.post.update({
+          where: { id: postId },
+          data: { sharesCount: { increment: 1 } },
+        });
+        return { message: 'Post shared', sharesCount: updatedPost.sharesCount };
+      }
+      throw error;
+    }
   }
 
   async savePost(userId: number, postId: number) {

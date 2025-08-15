@@ -6,7 +6,10 @@ import type {
   CreateRatingDto,
   UpdateRatingDto,
   QueryRatingDto,
+  RecipeListItem,
 } from "../types/recipe.type";
+
+export type { RecipeListItem };
 
 export const recipesService = {
   async getRecipes(query?: QueryRecipesDto) {
