@@ -39,7 +39,6 @@ export default function CommentInput({
     }
   }, [autoFocus]);
 
-  // Close emoji picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
@@ -118,13 +117,12 @@ export default function CommentInput({
         </button>
       </div>
 
-      {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div ref={emojiPickerRef} className="absolute bottom-full mb-2 right-0 z-50">
+        <div ref={emojiPickerRef} className="absolute top-full mt-2 right-0 z-50">
           <EmojiPicker 
             onEmojiClick={handleEmojiClick}
-            width={300}
-            height={400}
+            width={250}
+            height={300}
           />
         </div>
       )}

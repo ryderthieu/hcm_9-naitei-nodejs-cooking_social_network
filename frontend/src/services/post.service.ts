@@ -52,7 +52,7 @@ export async function unlikePost(postId: number) {
 }
 
 export async function sharePost(postId: number) {
-  const res = await post<{ message: string }>(`/posts/${postId}/share`);
+  const res = await post<{ message: string; sharesCount?: number }>(`/posts/${postId}/share`);
   return res.data;
 }
 

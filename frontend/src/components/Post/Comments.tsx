@@ -5,7 +5,8 @@ import type { CommentEntity } from "../../types/comment.type";
 import CommentInput from "../common/forms/CommentInput";
 import ReplyItem from "./ReplyItem";
 import { LoadingSpinner } from "../common";
-import { showErrorAlert, confirmAction } from "../../utils/utils";
+import { showErrorAlert } from "../../utils/utils";
+import { DeleteConfirm } from "../popup";
 
 interface CommentsProps {
   postId: number;
@@ -17,6 +18,12 @@ export default function Comments({ postId }: CommentsProps) {
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    commentId: number | null;
+    replyId: number | null;
+    type: 'comment' | 'reply';
+  }>({ isOpen: false, commentId: null, replyId: null, type: 'comment' });
 
   useEffect(() => {
     loadComments();
@@ -32,7 +39,7 @@ export default function Comments({ postId }: CommentsProps) {
           try {
             const nestedReplies = await loadRepliesRecursively(postId, reply.id);
             return { ...reply, replies: nestedReplies };
-          } catch (error) {
+      } catch (error) {
             return { ...reply, replies: [] };
           }
         })
@@ -46,7 +53,7 @@ export default function Comments({ postId }: CommentsProps) {
 
   const loadComments = async () => {
     try {
-      setLoading(true);
+    setLoading(true);
       const data = await fetchComments(postId);
       const commentsWithReplies = await Promise.all(
         (data.comments || []).map(async (comment) => {
@@ -65,11 +72,21 @@ export default function Comments({ postId }: CommentsProps) {
         })
       );
       setComments(commentsWithReplies);
-    } catch (error) {
+      } catch (error) {
       showErrorAlert(error, "Không thể tải bình luận. Vui lòng thử lại!");
-    } finally {
+      } finally {
       setLoading(false);
     }
+  };
+
+  const getTotalCommentsCount = (comments: CommentEntity[]): number => {
+    return comments.reduce((total, comment) => {
+      let count = 1;
+      if (comment.replies && comment.replies.length > 0) {
+        count += getTotalCommentsCount(comment.replies); 
+      }
+      return total + count;
+    }, 0);
   };
 
   const handleSubmitComment = async () => {
@@ -103,13 +120,28 @@ export default function Comments({ postId }: CommentsProps) {
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    if (!confirmAction("Bạn có chắc muốn xóa bình luận này?")) return;
-
     try {
       await deleteComment(postId, commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
     } catch (error) {
       showErrorAlert(error, "Không thể xóa bình luận. Vui lòng thử lại!");
+    }
+  };
+
+  const openDeleteConfirm = async (commentId: number) => {
+    setDeleteConfirm({ isOpen: true, commentId, replyId: null, type: 'comment' });
+  };
+
+  const openDeleteReplyConfirm = async (commentId: number, replyId: number) => {
+    setDeleteConfirm({ isOpen: true, commentId, replyId, type: 'reply' });
+  };
+
+  const handleDeleteReply = async (commentId: number, replyId: number) => {
+    try {
+      await deleteComment(postId, replyId);
+      await reloadRepliesForComment(commentId);
+    } catch (error) {
+      showErrorAlert(error, "Không thể xóa phản hồi. Vui lòng thử lại!");
     }
   };
 
@@ -144,40 +176,8 @@ export default function Comments({ postId }: CommentsProps) {
     }
   };
 
-  const handleSubmitReply = async (commentId: number, replyText: string) => {
-    if (!replyText.trim() || !user) return;
-
+  const reloadRepliesForComment = async (commentId: number) => {
     try {
-      setSubmitting(true);
-
-      await createComment(postId, {
-        comment: replyText.trim(),
-        replyOf: commentId
-      });
-
-      try {
-        const replies = await loadRepliesRecursively(postId, commentId);
-        setComments(prev =>
-          prev.map(c =>
-            c.id === commentId
-              ? { ...c, replies: replies }
-              : c
-          )
-        );
-      } catch (error) {
-      }
-    } catch (error) {
-      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteReply = async (commentId: number, replyId: number) => {
-    if (!confirm("Bạn có chắc muốn xóa phản hồi này?")) return;
-
-    try {
-      await deleteComment(postId, replyId);
       const replies = await loadRepliesRecursively(postId, commentId);
       setComments(prev =>
         prev.map(c =>
@@ -187,7 +187,41 @@ export default function Comments({ postId }: CommentsProps) {
         )
       );
     } catch (error) {
-      showErrorAlert(error, "Không thể xóa phản hồi. Vui lòng thử lại!");
+      showErrorAlert(error, "Không thể tải phản hồi. Vui lòng thử lại!");
+    }
+  };
+
+  const handleSubmitReply = async (commentId: number, replyText: string) => {
+    if (!replyText.trim() || !user) return;
+
+    try {
+      setSubmitting(true);
+      await createComment(postId, {
+        comment: replyText.trim(),
+        replyOf: commentId
+      });
+      await reloadRepliesForComment(commentId);
+    } catch (error) {
+      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReplyToReply = async (commentId: number, replyId: number, replyText: string) => {
+    if (!replyText.trim() || !user) return;
+
+    try {
+      setSubmitting(true);
+      await createComment(postId, {
+        comment: replyText.trim(),
+        replyOf: replyId
+      });
+      await reloadRepliesForComment(commentId);
+    } catch (error) {
+      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -207,45 +241,9 @@ export default function Comments({ postId }: CommentsProps) {
         await likeComment(postId, replyId);
       }
 
-      const replies = await loadRepliesRecursively(postId, commentId);
-      setComments(prev =>
-        prev.map(c =>
-          c.id === commentId
-            ? { ...c, replies: replies }
-            : c
-        )
-      );
+      await reloadRepliesForComment(commentId);
     } catch (error) {
       showErrorAlert(error, "Không thể thích phản hồi. Vui lòng thử lại!");
-    }
-  };
-
-  const handleReplyToReply = async (commentId: number, replyId: number, replyText: string) => {
-    if (!replyText.trim() || !user) return;
-
-    try {
-      setSubmitting(true);
-
-      await createComment(postId, {
-        comment: replyText.trim(),
-        replyOf: replyId
-      });
-
-      try {
-        const replies = await loadRepliesRecursively(postId, commentId);
-        setComments(prev =>
-          prev.map(c =>
-            c.id === commentId
-              ? { ...c, replies: replies }
-              : c
-          )
-        );
-      } catch (error) {
-      }
-    } catch (error) {
-      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -254,24 +252,25 @@ export default function Comments({ postId }: CommentsProps) {
       <div className="p-4 text-center">
         <LoadingSpinner size="lg" className="mx-auto" />
         <p className="text-gray-600 mt-2">Đang tải bình luận...</p>
-      </div>
+              </div>
     );
   }
 
   return (
+    <>
     <div className="p-4 flex flex-col h-full">
 
       {comments.length > 0 && (
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900">{comments.length} bình luận</h3>
+          <h3 className="text-sm font-medium text-gray-900">{getTotalCommentsCount(comments)} bình luận</h3>
           <button className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 transition-colors">
             <span>Sắp xếp theo</span>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
-          </button>
-        </div>
-      )}
+            </button>
+          </div>
+        )}
 
       <div className="space-y-4 flex-1 overflow-y-auto">
         {comments.length === 0 ? (
@@ -281,8 +280,8 @@ export default function Comments({ postId }: CommentsProps) {
             </svg>
             <p>Chưa có bình luận nào</p>
             <p className="text-sm">Hãy là người đầu tiên bình luận!</p>
-          </div>
-        ) : (
+                      </div>
+                    ) : (
           comments.map((comment) => (
             <ReplyItem
               key={comment.id}
@@ -296,26 +295,19 @@ export default function Comments({ postId }: CommentsProps) {
               isPostOwner={false}
               onLikeToggle={() => handleLikeComment(comment.id)}
               onEdit={(newText: string) => handleUpdateComment(comment.id, newText)}
-              onDelete={() => handleDeleteComment(comment.id)}
+              onDelete={() => openDeleteConfirm(comment.id)}
               onReply={(replyText: string) => handleSubmitReply(comment.id, replyText)}
               depth={0}
               replies={comment.replies || []}
               onLoadReplies={async () => {
-                const replies = await loadRepliesRecursively(postId, comment.id);
-                setComments(prev =>
-                  prev.map(c =>
-                    c.id === comment.id
-                      ? { ...c, replies: replies }
-                      : c
-                  )
-                );
+                await reloadRepliesForComment(comment.id);
               }}
               onLoadRepliesForReply={async (replyId: number) => {
                 return await loadRepliesRecursively(postId, replyId);
               }}
               onReplyToReply={(replyId: number, replyText: string) => handleReplyToReply(comment.id, replyId, replyText)}
               onLikeReply={(replyId: number) => handleLikeReply(comment.id, replyId)}
-              onDeleteReply={(replyId: number) => handleDeleteReply(comment.id, replyId)}
+              onDeleteReply={(replyId: number) => openDeleteReplyConfirm(comment.id, replyId)}
               currentUser={user}
             />
           ))
@@ -337,6 +329,22 @@ export default function Comments({ postId }: CommentsProps) {
         </div>
       )}
     </div>
+
+    <DeleteConfirm
+      isOpen={deleteConfirm.isOpen}
+      onClose={() => setDeleteConfirm({ isOpen: false, commentId: null, replyId: null, type: 'comment' })}
+      onConfirm={() => {
+        if (deleteConfirm.type === 'comment' && deleteConfirm.commentId) {
+          handleDeleteComment(deleteConfirm.commentId);
+          setDeleteConfirm({ isOpen: false, commentId: null, replyId: null, type: 'comment' });
+        } else if (deleteConfirm.type === 'reply' && deleteConfirm.commentId && deleteConfirm.replyId) {
+          handleDeleteReply(deleteConfirm.commentId, deleteConfirm.replyId);
+          setDeleteConfirm({ isOpen: false, commentId: null, replyId: null, type: 'comment' });
+        }
+      }}
+      type="comment"
+    />
+  </>
   );
 }
 

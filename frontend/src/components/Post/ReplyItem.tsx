@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import UserHeader from "../common/user/UserHeader";
 import CommentInput from "../common/forms/CommentInput";
-import { timeAgoVi, showErrorAlert, confirmAction } from "../../utils/utils";
+import { timeAgoVi, showErrorAlert } from "../../utils/utils";
 import HeartIcon from "./icons/HeartIcon";
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
 import { FaReply } from "react-icons/fa";
+import EmojiPicker from "emoji-picker-react";
 
 interface ReplyUser {
   id: number;
@@ -68,14 +68,11 @@ export default function ReplyItem({
   const [postingReply, setPostingReply] = useState(false);
   const [showNestedReplies, setShowNestedReplies] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const canModify = isOwner || isPostOwner;
 
-  useEffect(() => {
-    if (replies.length > 0 && onLoadRepliesForReply) {
-      onLoadRepliesForReply(_id);
-    }
-  }, []);
+
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -102,7 +99,6 @@ export default function ReplyItem({
     try {
       await onEdit(val);
       setIsEditing(false);
-      setEditText(val);
     } catch (error) {
       showErrorAlert(error, "Thao tác đã thất bại. Vui lòng thử lại!");
     } finally {
@@ -131,7 +127,7 @@ export default function ReplyItem({
 
   const handleReplyClick = () => {
     setShowReplyInput(true);
-    setReplyText(`@${user.first_name}${user.last_name ? " " + user.last_name : ""} `);
+    setReplyText(`@${user.first_name} ${user.last_name || ""} `);
   };
 
   const handleNestedReply = async (replyId: number, replyText: string) => {
@@ -175,30 +171,49 @@ export default function ReplyItem({
   return (
     <div className={`space-y-2 ${className}`}>
       <div className={`flex items-start gap-3 ${indentClass}`}>
-        <UserHeader
-          user={user}
-          timestamp={created_at}
-          size={depth === 0 ? "sm" : "sm"}
-          showTimestamp={false}
-          showName={false}
-          className="flex-shrink-0"
-        />
+        <div className="flex-shrink-0 pt-1">
+          <img
+            src={user.avatar || "/src/assets/avatar-default.svg"}
+            alt="avatar"
+            className="w-8 h-8 rounded-full object-cover border border-gray-200"
+          />
+        </div>
         <div className="flex-1">
           <div className="bg-white rounded-lg p-3 text-sm relative">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-gray-900">
-                    {user.first_name} {user.last_name}
-                  </span>
-                </div>
+                                 <div className="mb-1">
+                   <span className="font-medium text-gray-900">
+                     {user.first_name} {user.last_name}
+                   </span>
+                 </div>
                 {isEditing ? (
                   <div className="mt-1">
-                    <input
-                      className="w-full border rounded px-3 py-1 text-sm"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                    />
+                    <div className="relative">
+                      <input
+                        className="w-full border rounded px-3 py-1 text-sm pr-8"
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                      />
+                      <button
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        😊
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="absolute top-full left-0 mt-2 z-10">
+                          <EmojiPicker
+                            onEmojiClick={(emojiObject) => {
+                              setEditText(prev => prev + emojiObject.emoji);
+                              setShowEmojiPicker(false);
+                            }}
+                            width={250}
+                            height={300}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-2 flex gap-2">
                       <button
                         className="px-3 py-1 text-sm rounded bg-yellow-500 text-white disabled:opacity-60"
@@ -212,6 +227,7 @@ export default function ReplyItem({
                         onClick={() => {
                           setIsEditing(false);
                           setEditText(comment);
+                          setShowEmojiPicker(false);
                         }}
                       >
                         Hủy
@@ -235,20 +251,22 @@ export default function ReplyItem({
                     <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border py-1 min-w-[140px] z-10">
                       {isOwner && (
                         <button
-                          className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
                           onClick={() => {
                             setIsEditing(true);
                             setEditText(comment);
                             setShowDropdown(false);
                           }}
                         >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                           Sửa bình luận
                         </button>
                       )}
                       <button
-                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-sm text-red-600"
+                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-sm text-red-600 flex items-center gap-2"
                         onClick={async () => {
-                          if (!confirmAction("Xóa bình luận này?")) return;
                           setShowDropdown(false);
                           try {
                             await onDelete();
@@ -257,6 +275,9 @@ export default function ReplyItem({
                           }
                         }}
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                         Xóa bình luận
                       </button>
                     </div>
@@ -294,6 +315,7 @@ export default function ReplyItem({
                 buttonText="Gửi"
                 loading={postingReply}
                 autoFocus
+                showEmoji
               />
             </div>
           )}
@@ -325,17 +347,11 @@ export default function ReplyItem({
               isOwner={currentUser && Number(currentUser.id) === Number(nestedReply.user.id)}
               isPostOwner={false}
               onLikeToggle={() => handleLikeNestedReply(nestedReply.id)}
-              onEdit={async (newText: string) => {
-                if (onReplyToReply) {
-                  await onReplyToReply(nestedReply.id, newText);
-                }
-              }}
-              onDelete={async () => {
-                await handleDeleteNestedReply(nestedReply.id);
-              }}
-              onReply={async (replyText: string) => {
-                await handleNestedReply(nestedReply.id, replyText);
-              }}
+                             onEdit={async (newText: string) => {
+                 await onReplyToReply?.(nestedReply.id, newText);
+               }}
+                             onDelete={() => handleDeleteNestedReply(nestedReply.id)}
+               onReply={(replyText: string) => handleNestedReply(nestedReply.id, replyText)}
               depth={depth + 1}
               replies={nestedReply.replies || []}
               onLoadReplies={onLoadReplies}

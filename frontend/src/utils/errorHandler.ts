@@ -30,6 +30,10 @@ export const showErrorAlert = (
   alert(message);
 };
 
+export const showSuccessAlert = (message: string) => {
+  alert(message);
+};
+
 export const confirmAction = (message: string): boolean => {
   return confirm(message);
 };

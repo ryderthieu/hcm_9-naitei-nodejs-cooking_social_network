@@ -1,4 +1,4 @@
-export { handleError, showErrorAlert, confirmAction } from './errorHandler';
+export { handleError, showErrorAlert, showSuccessAlert, confirmAction } from './errorHandler';
 export { timeAgoVi } from './timeUtils';
 export { 
   validateEmail, 
