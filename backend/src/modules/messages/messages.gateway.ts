@@ -58,10 +58,12 @@ export class MessagesGateway
     }
   }
 
-  private conversationUpdate(conversationId: number, client: Socket) {
-    client.to(`conversation_${conversationId}`).emit('conversation_update', {
-      conversationId,
-    });
+  private conversationUpdate(conversationId: number) {
+    this.server
+      .to(`conversation_${conversationId}`)
+      .emit('conversation_update', {
+        conversationId,
+      });
   }
 
   @SubscribeMessage('get_online_users')
@@ -84,7 +86,7 @@ export class MessagesGateway
       .to(`conversation_${data.conversationId}`)
       .emit('new_message', message);
 
-    this.conversationUpdate(data.conversationId, client);
+    this.conversationUpdate(data.conversationId);
 
     return message;
   }
@@ -102,7 +104,7 @@ export class MessagesGateway
       .to(`conversation_${deletedMessage.conversationId}`)
       .emit('message_deleted', deletedMessage);
 
-    this.conversationUpdate(data.conversationId, client);
+    this.conversationUpdate(data.conversationId);
   }
 
   @SubscribeMessage('mark_as_seen')
@@ -130,6 +132,7 @@ export class MessagesGateway
     client.to(`conversation_${data.conversationId}`).emit('typing', {
       userId: client.data.userId,
       isTyping: data.isTyping,
+      conversationId: data.conversationId,
     });
   }
 }

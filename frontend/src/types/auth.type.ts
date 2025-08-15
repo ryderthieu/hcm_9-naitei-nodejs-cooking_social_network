@@ -32,14 +32,17 @@ export interface LoginErrors {
 }
 
 export interface User {
+  id: number;
   email: string;
   username: string;
   firstName: string;
   lastName: string;
+  avatar?: string | null;
 }
 
 export interface AuthContextProps {
   user: User | null;
+  loading: boolean;
   login: (loginDto: LoginDto) => Promise<void>;
   logout: () => void;
 }
