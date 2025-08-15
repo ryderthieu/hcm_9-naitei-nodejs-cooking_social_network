@@ -17,8 +17,12 @@ import Blog1 from "../pages/blog/Blog1";
 import Blog2 from "../pages/blog/Blog2";
 import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
+import AccountPage from "../pages/main/Account/AccountPage";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
+import SearchPage from "../pages/main/SearchPage/SearchPage";
+import SupportPage from "../pages/support/SupportPage";
+import EditRecipeForm from "../pages/recipe/EditRecipe";
 import DetailRecipe from "../pages/recipe/DetailRecipe";
 
 export default function AppRouter() {
@@ -27,17 +31,25 @@ export default function AppRouter() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <Feed />
           </MainLayout>
-        } 
+        }
       />
       <Route path="*" element={<NotFound />} />
       <Route path="/messages" element={<MessagePage />} />
       <Route path="/messages/:conversationId" element={<MessagePage />} />
+      <Route
+        path="/account"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <AccountPage />
+          </MainLayout>
+        }
+      />
       <Route
         path="/profile/:username"
         element={
@@ -140,6 +152,41 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <DetailRecipe />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/search"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SearchPage />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/edit-recipe/:id"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <EditRecipeForm />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/search"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SearchPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/support"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SupportPage />
           </MainLayout>
         }
       />

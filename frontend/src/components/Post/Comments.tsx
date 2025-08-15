@@ -5,8 +5,8 @@ import type { CommentEntity } from "../../types/comment.type";
 import CommentInput from "../common/forms/CommentInput";
 import ReplyItem from "./ReplyItem";
 import { LoadingSpinner } from "../common";
-import { showErrorAlert } from "../../utils/utils";
-import { DeleteConfirm } from "../popup";
+import { DeleteConfirm, AlertPopup } from "../popup";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 
 interface CommentsProps {
   postId: number;
@@ -14,6 +14,7 @@ interface CommentsProps {
 
 export default function Comments({ postId }: CommentsProps) {
   const { user } = useAuth();
+  const { alert, showError, showInfo, closeAlert } = useAlertPopup();
   const [comments, setComments] = useState<CommentEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
@@ -73,7 +74,7 @@ export default function Comments({ postId }: CommentsProps) {
       );
       setComments(commentsWithReplies);
       } catch (error) {
-      showErrorAlert(error, "Không thể tải bình luận. Vui lòng thử lại!");
+      showError("Không thể tải bình luận. Vui lòng thử lại!");
       } finally {
       setLoading(false);
     }
@@ -98,7 +99,7 @@ export default function Comments({ postId }: CommentsProps) {
       setComments(prev => [response.comment, ...prev]);
       setNewComment("");
     } catch (error) {
-      showErrorAlert(error, "Không thể tạo bình luận. Vui lòng thử lại!");
+      showError("Không thể tạo bình luận. Vui lòng thử lại!");
     } finally {
       setSubmitting(false);
     }
@@ -114,8 +115,9 @@ export default function Comments({ postId }: CommentsProps) {
             : c
         )
       );
+      showInfo("Chỉnh sửa bình luận thành công!");
     } catch (error) {
-      showErrorAlert(error, "Không thể cập nhật bình luận. Vui lòng thử lại!");
+      showError("Không thể cập nhật bình luận. Vui lòng thử lại!");
     }
   };
 
@@ -124,7 +126,7 @@ export default function Comments({ postId }: CommentsProps) {
       await deleteComment(postId, commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
     } catch (error) {
-      showErrorAlert(error, "Không thể xóa bình luận. Vui lòng thử lại!");
+      showError("Không thể xóa bình luận. Vui lòng thử lại!");
     }
   };
 
@@ -141,7 +143,7 @@ export default function Comments({ postId }: CommentsProps) {
       await deleteComment(postId, replyId);
       await reloadRepliesForComment(commentId);
     } catch (error) {
-      showErrorAlert(error, "Không thể xóa phản hồi. Vui lòng thử lại!");
+      showError("Không thể xóa phản hồi. Vui lòng thử lại!");
     }
   };
 
@@ -172,7 +174,7 @@ export default function Comments({ postId }: CommentsProps) {
         );
       }
     } catch (error) {
-      showErrorAlert(error, "Không thể thích bình luận. Vui lòng thử lại!");
+      showError("Không thể thích bình luận. Vui lòng thử lại!");
     }
   };
 
@@ -187,7 +189,7 @@ export default function Comments({ postId }: CommentsProps) {
         )
       );
     } catch (error) {
-      showErrorAlert(error, "Không thể tải phản hồi. Vui lòng thử lại!");
+      showError("Không thể tải phản hồi. Vui lòng thử lại!");
     }
   };
 
@@ -202,7 +204,7 @@ export default function Comments({ postId }: CommentsProps) {
       });
       await reloadRepliesForComment(commentId);
     } catch (error) {
-      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
+      showError("Không thể tạo phản hồi. Vui lòng thử lại!");
     } finally {
       setSubmitting(false);
     }
@@ -219,7 +221,7 @@ export default function Comments({ postId }: CommentsProps) {
       });
       await reloadRepliesForComment(commentId);
     } catch (error) {
-      showErrorAlert(error, "Không thể tạo phản hồi. Vui lòng thử lại!");
+      showError("Không thể tạo phản hồi. Vui lòng thử lại!");
     } finally {
       setSubmitting(false);
     }
@@ -243,7 +245,7 @@ export default function Comments({ postId }: CommentsProps) {
 
       await reloadRepliesForComment(commentId);
     } catch (error) {
-      showErrorAlert(error, "Không thể thích phản hồi. Vui lòng thử lại!");
+      showError("Không thể thích phản hồi. Vui lòng thử lại!");
     }
   };
 
@@ -344,8 +346,17 @@ export default function Comments({ postId }: CommentsProps) {
       }}
       type="comment"
     />
+    <AlertPopup
+      isOpen={alert.isOpen}
+      type={alert.type}
+      title={alert.title}
+      message={alert.message}
+      confirmText={alert.confirmText}
+      showCancel={alert.showCancel}
+      cancelText={alert.cancelText}
+      onConfirm={alert.onConfirm}
+      onClose={closeAlert}
+    />
   </>
   );
 }
-
-

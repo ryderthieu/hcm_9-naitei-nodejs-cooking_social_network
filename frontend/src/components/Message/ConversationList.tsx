@@ -15,6 +15,7 @@ interface ConversationListProps {
   user?: Member | null;
   onConversationSelect: (conversationId: string) => void;
   onlineUserIds?: number[];
+  onAddConversation: () => void;
 }
 
 const getOtherMembers = (
@@ -34,15 +35,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   user,
   onConversationSelect,
   onlineUserIds = [],
+  onAddConversation,
 }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full ">
       <div className="p-4 border-b border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-semibold text-gray-800">Tin nhắn</h1>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
+            onClick={onAddConversation}
+          >
             <Plus size={20} className="text-gray-600" />
           </button>
         </div>
@@ -136,7 +141,30 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-sm text-gray-600 truncate flex-1">
-                      {conversation.lastMessage?.content || "Chưa có tin nhắn"}
+                      {conversation.lastMessage
+                        ? conversation.lastMessage.type === "TEXT"
+                          ? conversation.lastMessage.content
+                          : conversation.lastMessage.type === "MEDIA"
+                          ? ((): string => {
+                              try {
+                                const d = JSON.parse(
+                                  conversation.lastMessage.content
+                                );
+                                return d.kind === "IMAGE"
+                                  ? "Hình ảnh"
+                                  : "Video";
+                              } catch {
+                                return "Media";
+                              }
+                            })()
+                          : conversation.lastMessage.type === "POST"
+                          ? "Bài viết"
+                          : conversation.lastMessage.type === "RECIPE"
+                          ? "Công thức"
+                          : conversation.lastMessage.type === "SYSTEM"
+                          ? conversation.lastMessage.content
+                          : "Chưa có tin nhắn"
+                        : "Chưa có tin nhắn"}
                     </p>
                     {conversation.unreadCount > 0 && (
                       <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 ml-2 flex-shrink-0 min-w-[20px] text-center">

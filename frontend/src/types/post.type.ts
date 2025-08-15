@@ -63,10 +63,15 @@ export interface FilterPostsDto {
   page?: number;
 }
 
-
-
 export interface UpdatePostDto {
   caption?: string;
   media?: PostMedia[];
   recipeId?: number | null;
+}
+
+export interface CreatePostDto {
+  caption?: string;
+  recipeId: number;
+  mediaUrls?: string[];
+  mediaTypes?: MediaType[];
 }

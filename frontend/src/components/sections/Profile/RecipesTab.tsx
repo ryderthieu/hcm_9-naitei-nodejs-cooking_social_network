@@ -33,7 +33,7 @@ export default function RecipesTab({ username }: RecipesTabProps) {
   }, [username]);
 
   const handleRecipeClick = (recipe: RecipeListItem) => {
-    navigate(`/recipe/${recipe.slug || recipe.id}`);
+    navigate(`/detail-recipe/${recipe.id}`);
   };
 
   if (loading) {
@@ -87,8 +87,20 @@ export default function RecipesTab({ username }: RecipesTabProps) {
           onClick={() => handleRecipeClick(recipe)}
           className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
         >
-          <div className="h-48 bg-gray-100 flex items-center justify-center">
-            <BookOpen className="w-12 h-12 text-gray-400" />
+          <div className="h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+            {recipe.images && recipe.images.length > 0 ? (
+              <img
+                src={recipe.images[0].imageUrl}
+                alt={recipe.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <BookOpen className={`w-12 h-12 text-gray-400 ${recipe.images && recipe.images.length > 0 ? 'hidden' : ''}`} />
           </div>
           <div className="p-4">
             <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">

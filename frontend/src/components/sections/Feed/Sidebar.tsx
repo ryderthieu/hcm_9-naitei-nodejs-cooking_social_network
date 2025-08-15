@@ -12,39 +12,37 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { recipesService } from "../../../services/recipe.service";
 import { toast } from "react-toastify";
-import { getFollowers, isFollowing } from "../../../services/user.service";
+import { followUser, getUsers, isFollowing } from "../../../services/user.service";
 import type { User } from "../../../types/auth.type";
 import type { UserData } from "../../../types/user.type";
-import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
+import { DEFAULT_AVATAR_URL, DEFAULT_RECIPE_URL } from "../../../constants/constants";
+import type { Recipe } from "../../../types/recipe.type";
 
-const DefaultRecipeImage = "https://cdn.loveandlemons.com/wp-content/uploads/2024/07/ratatouille.jpg";
 
 interface MenuItem {
   label: string;
   icon: React.ReactNode;
   href: string;
+  activeTab: string;
 }
 
 interface LeftSidebarProps {
   activeTab: string;
-  onTabChange?: (tab: string) => void;
-}
-
-interface Recipe {
-  id: number;
-  title: string;
-  image: string;
+  onTabChange: (tab: string) => void;
+  onAdd: () => void;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   activeTab,
+  onTabChange,
+  onAdd,
 }) => {
   const { user } = useAuth() as { user: User | null };
   const data = {
     menu: [
-      { label: "Bài viết", icon: <FaNewspaper />, href: "/explore/posts" },
-      { label: "Trang cá nhân", icon: <FaUser />, href: `/profile/${user?.id}` },
-      { label: "Công thức của tôi", icon: <FaUtensils />, href: "/recipes/saved" },
+      { label: "Bài viết", icon: <FaNewspaper />, activeTab: "posts", href: "" },
+      { label: "Trang cá nhân", icon: <FaUser />, href: `/profile/${user?.username}` },
+      { label: "Công thức của tôi", icon: <FaUtensils />, activeTab: "recipes", href: "" },
     ] as MenuItem[],
   };
 
@@ -70,8 +68,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             <li key={item.label}>
               <Link
                 to={item.href}
+                onClick={() => onTabChange(item.activeTab)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  (item.label === "Bài viết" && activeTab === "posts")
+                  (item.activeTab === activeTab)
                     ? "bg-[#F5F5F5] text-[#FF6363] font-semibold"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
@@ -84,6 +83,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         </ul>
 
         <button
+          onClick={onAdd}
           className="mt-6 w-full bg-[#FF6363] text-white py-3 rounded-xl font-semibold hover:bg-[#ff4f4f] transition flex items-center justify-center gap-2"
         >
           <FaPlus /> Tạo bài viết mới
@@ -101,33 +101,33 @@ export const RightSidebar: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async (user: User) => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        
-        const recipeIds = [
-          999,
-          1000,
-        ];
 
-        const usersPromises = getFollowers(user.username);
-        const recipesPromises = recipeIds.map((id) => recipesService.getRecipeById(id));
+        const usersPromises = getUsers();
+        const recipesPromises = recipesService.getRecipes();
 
-        const [followers, ...recipeResponses] = await Promise.all([
+        const [users, recipeResponses] = await Promise.all([
           usersPromises,
-          ...recipesPromises,
+          recipesPromises,
         ]);
 
         const _isFollowing = await Promise.all(
-          followers.map((user) => isFollowing(user.username))
+          users.map((user) => isFollowing(user.username))
         );
 
-        const suggestFollowUsers = followers
-          .filter((_,i) => !_isFollowing[i])
+        const suggestFollowUsers = users
+          .filter((user,i) => (user.id !== currentUser.id) && !_isFollowing[i])
           .slice(0, 5);
 
-        const recipes = recipeResponses
-          .map((res: { recipe: Recipe }) => res.recipe);
+        const recipes = recipeResponses.recipes
+          .sort((a: Recipe, b: Recipe) => {
+            const savedDiff = (b.savedByUsers?.length || 0) - (a.savedByUsers?.length || 0);
+            if (savedDiff !== 0) return savedDiff;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          })
+          .slice(0, 3);
         
         setSuggestFollow(suggestFollowUsers);
         setHotDishs(recipes);
@@ -139,8 +139,24 @@ export const RightSidebar: React.FC = () => {
       }
     };
 
-    fetchData(currentUser);
+    fetchData();
   }, [currentUser.id]);
+
+  const handleFollow = async (username: string) => {
+    try {
+      const data = await followUser(username);
+      if (!data) throw new Error("API follow failed");
+
+      setSuggestFollow(prev =>
+        prev.filter(user => user.username !== username)
+      );
+
+      toast.success("Đã theo dõi người dùng");
+    } catch (error) {
+      console.error("Error following user:", error);
+      toast.error("Không thể thực hiện. Vui lòng thử lại sau.");
+    }
+  };
 
   return (
     <aside className="hidden lg:block w-72 pl-4 space-y-6 sticky top-24 h-fit">
@@ -165,7 +181,7 @@ export const RightSidebar: React.FC = () => {
                   />
                   <div className="flex flex-col">
                     <Link
-                      to={`/profile/${user.id}`}
+                      to={`/profile/${user.username}`}
                       className="text-gray-700 font-medium text-sm hover:text-[#FFB800] transition-colors cursor-pointer"
                     >
                       {user.lastName + " " + user.firstName}
@@ -176,6 +192,7 @@ export const RightSidebar: React.FC = () => {
                   </div>
                 </div>
                 <button
+                  onClick={() => handleFollow(user.username)}
                   className="ml-2 px-3 py-1 rounded-full text-xs font-semibold transition flex items-center justify-center bg-[#FF6363] text-white hover:bg-[#ff4f4f]"
                 >
                   <MdLibraryAdd size={16} />
@@ -202,11 +219,11 @@ export const RightSidebar: React.FC = () => {
             {hotDishs.map((dish) => (
               <li key={dish.id} className="flex items-center gap-3">
                 <Link
-                  to={`/recipes/${dish.id}`}
+                  to={`/detail-recipe/${dish.id}`}
                   className="flex flex-row gap-2 items-center hover:scale-105 transition-transform duration-200 w-full"
                 >
                   <img
-                    src={dish.image || DefaultRecipeImage}
+                    src={dish.images[0]?.imageUrl || DEFAULT_RECIPE_URL}
                     alt={dish.title}
                     className="w-10 h-10 rounded object-cover border border-[#FF6363]"
                   />

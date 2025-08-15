@@ -1,13 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  getUserByUsername,
-  getUserStats,
-  toggleFollow,
-  updateUserProfile,
-} from "../../../services/user.service";
+import { getUserByUsername, toggleFollow } from "../../../services/user.service";
 
-import { showErrorAlert, showSuccessAlert } from "../../../utils/errorHandler";
+import { AlertPopup } from "../../../components/popup";
+import { useAlertPopup } from "../../../hooks/useAlertPopup";
 import { useAuth } from "../../../contexts/AuthContext";
 import ProfileHeader from "../../../components/sections/Profile/ProfileHeader";
 import ProfileSidebar from "../../../components/sections/Profile/ProfileSidebar";
@@ -22,6 +18,7 @@ export default function ProfilePage() {
   const { username } = useParams();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const { alert, showError, showInfo, closeAlert } = useAlertPopup();
 
   const [activeTab, setActiveTab] = useState("posts");
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -66,7 +63,7 @@ export default function ProfilePage() {
         }
       } catch (error) {
         console.error("Error fetching profile data:", error);
-        showErrorAlert(error, "Không thể tải thông tin người dùng");
+        setUserData(null);
       } finally {
         setIsLoading(false);
       }
@@ -77,7 +74,9 @@ export default function ProfilePage() {
 
   const handleToggleFollow = async () => {
     if (!targetUsername || !currentUser) {
-      showErrorAlert(null, "Vui lòng đăng nhập để thực hiện thao tác này");
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", {
+        onConfirm: () => navigate("/auth/login"),
+      });
       return;
     }
 
@@ -98,31 +97,17 @@ export default function ProfilePage() {
         setUserStats(updatedStats);
       }
 
-      showSuccessAlert(
-        willFollow
-          ? `Đã theo dõi ${userData?.firstName || "người dùng"}`
-          : `Đã hủy theo dõi ${userData?.firstName || "người dùng"}`
-      );
     } catch (error) {
       setIsFollowing(!isFollowing);
-      showErrorAlert(error, "Không thể thực hiện thao tác");
-    }
-  };
-
-  const handleEditProfile = async (formData: UserProfile) => {
-    try {
-      const updatedUser = await updateUserProfile(formData);
-      setUserData(updatedUser);
-      setIsEditModalOpen(false);
-      showSuccessAlert("Cập nhật hồ sơ thành công!");
-    } catch (error) {
-      showErrorAlert(error, "Không thể cập nhật hồ sơ");
+      showError("Không thể thực hiện thao tác");
     }
   };
 
   const handleMessage = async (targetUsername: string) => {
     if (!currentUser) {
-      showErrorAlert(null, "Vui lòng đăng nhập để thực hiện thao tác này");
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", {
+        onConfirm: () => navigate("/auth/login"),
+      });
       return;
     }
     try {
@@ -250,6 +235,18 @@ export default function ProfilePage() {
         onClose={() => setIsEditModalOpen(false)}
         initialUser={userData as Partial<UserProfile>}
         onUpdated={(updated) => setUserData(updated)}
+      />
+
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
       />
     </div>
   );

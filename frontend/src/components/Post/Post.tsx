@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useDropdown } from "../../hooks";
 import { ThreeDotsMenu } from "../common";
-import { SharePopup, EditPostPopup, DeleteConfirm } from "../popup";
+import { SharePopup, EditPostPopup, DeleteConfirm, AlertPopup } from "../popup";
 import PostActionBar from "../common/ui/PostActionBar";
 import type { PostEntity } from "../../types/post.type";
 import {
@@ -14,11 +14,10 @@ import {
   savePost,
   unsavePost,
 } from "../../services/post.service";
-
 import { useAuth } from "../../contexts/AuthContext";
 import UserHeader from "../common/user/UserHeader";
 import MediaGrid from "../common/media/MediaGrid";
-import { showErrorAlert } from "../../utils/utils";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 
 interface PostProps {
   post: PostEntity;
@@ -33,6 +32,7 @@ export default function Post({
 }: PostProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { alert, showError, showInfo, closeAlert } = useAlertPopup();
 
   if (!post || !post.id || !post.author) {
     return (
@@ -75,7 +75,7 @@ export default function Post({
         setDeleted(true);
       }, 2000);
     } catch (error) {
-      showErrorAlert(error, "Không thể xóa bài viết. Vui lòng thử lại!");
+      showError("Không thể xóa bài viết. Vui lòng thử lại!");
     }
   };
 
@@ -97,7 +97,7 @@ export default function Post({
         setLiked(true);
       }
     } catch (e) {
-      showErrorAlert(e, "Thao tác đã thất bại. Vui lòng thử lại!");
+      showError("Thao tác đã thất bại. Vui lòng thử lại!");
     } finally {
       setLiking(false);
     }
@@ -124,7 +124,7 @@ export default function Post({
         setSaved(true);
       }
     } catch (e) {
-      showErrorAlert(e, "Không thể lưu bài viết. Vui lòng thử lại!");
+      showError("Không thể lưu bài viết. Vui lòng thử lại!");
     } finally {
       setSaving(false);
     }
@@ -225,7 +225,7 @@ export default function Post({
                 <span
                   className="text-yellow-500 font-medium hover:underline cursor-pointer"
                   onClick={() =>
-                    navigate(`/recipe/${data.recipe.slug || data.recipe.id}`)
+                    navigate(`/detail-recipe/${data.recipe.id}`)
                   }
                 >
                   @{data.recipe.title}
@@ -288,6 +288,18 @@ export default function Post({
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
         type="post"
+      />
+
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
       />
     </>
   );

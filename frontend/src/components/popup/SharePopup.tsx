@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { searchUsers } from "../../services/user.service";
-import { showErrorAlert, showSuccessAlert } from "../../utils/utils";
+import { AlertPopup } from "./index";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import { sharePost } from "../../services/post.service";
 import { getConversations, createConversation } from "../../services/conversation.service";
 import { io } from "socket.io-client";
@@ -21,6 +22,7 @@ export default function SharePopup({
   postId,
   onShareSuccess,
 }: SharePopupProps) {
+  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const [activeTab, setActiveTab] = useState<"social" | "messages">("social");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -43,10 +45,7 @@ export default function SharePopup({
             const users = await searchUsers(query);
             setSearchResults(users);
           } catch (error) {
-            showErrorAlert(
-              error,
-              "Không thể tìm kiếm người dùng. Vui lòng thử lại!"
-            );
+            showError("Không thể tìm kiếm người dùng. Vui lòng thử lại!");
             setSearchResults([]);
           } finally {
             setIsSearching(false);
@@ -84,11 +83,11 @@ export default function SharePopup({
           break;
         case 'copy':
           navigator.clipboard.writeText(shareUrl);
-          showSuccessAlert("Đã sao chép link bài viết!");
+          showSuccess("Đã sao chép link bài viết!");
           break;
       }
     } catch (e) {
-      showErrorAlert(e, "Không thể chia sẻ bài viết. Vui lòng thử lại!");
+      showError("Không thể chia sẻ bài viết. Vui lòng thử lại!");
     } finally {
       setSharing(false);
     }
@@ -166,9 +165,9 @@ export default function SharePopup({
 
       socket.disconnect();
       onClose();
-      showSuccessAlert("Đã chia sẻ bài viết qua tin nhắn!");
+      showSuccess("Đã chia sẻ bài viết qua tin nhắn!");
     } catch (e) {
-      showErrorAlert(e, "Không thể chia sẻ bài viết. Vui lòng thử lại!");
+      showError("Không thể chia sẻ bài viết. Vui lòng thử lại!");
     } finally {
       setSharing(false);
     }
@@ -363,6 +362,17 @@ export default function SharePopup({
           </div>
         )}
       </div>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
+      />
     </div>
   );
 }

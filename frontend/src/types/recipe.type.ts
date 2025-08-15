@@ -120,6 +120,10 @@ export interface RecipeListItem {
   title: string;
   slug: string;
   description?: string;
+  images?: { 
+    id: number; 
+    recipeId: number; 
+    imageUrl: string }[];
   author?: {
     id: number;
     firstName: string;
@@ -128,4 +132,41 @@ export interface RecipeListItem {
   };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type IngredientListItem = {
+  id: number;
+  name: string;
+  unit?: string;
+};
+
+export type FormIngredient = {
+  id: string;
+  name: string;
+  amount: string;
+  unit: string;
+  ingredientId: number | null;
+};
+
+export type FormStep = {
+  id: string;
+  summary: string;
+  detail: string;
+  time: string;
+  images: string[];
+};
+export interface SavedByUsersDto {
+  createdAt: Date;
+  userId: number;
+  recipeId: number;
+}
+
+export interface Recipe {
+  id: number;
+  authorId: number;
+  title: string;
+  images: ImageDto[];
+  savedByUsers: SavedByUsersDto[];
+  createdAt: Date;
+  categories?: CategoryDto;
 }

@@ -10,7 +10,7 @@ import {
   UseGuards,
   ParseIntPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -30,15 +30,18 @@ export class ConversationsController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @CurrentUser('user') user: User,
-    @Body() createConversationDto: CreateConversationDto
+    @Body() createConversationDto: CreateConversationDto,
   ) {
-    return this.conversationsService.createConversation(user.id, createConversationDto);
+    return this.conversationsService.createConversation(
+      user.id,
+      createConversationDto,
+    );
   }
 
   @Get()
   async getUserConversations(
     @CurrentUser('user') user: User,
-    @Query() queryDto: GetConversationsQueryDto
+    @Query() queryDto: GetConversationsQueryDto,
   ) {
     return this.conversationsService.getUserConversations(user.id, queryDto);
   }
@@ -46,7 +49,7 @@ export class ConversationsController {
   @Get(':id')
   async getConversation(
     @Param('id', ParseIntPipe) conversationId: number,
-    @CurrentUser('user') user: User
+    @CurrentUser('user') user: User,
   ) {
     return this.conversationsService.getConversation(conversationId, user.id);
   }
@@ -55,21 +58,24 @@ export class ConversationsController {
   async updateConversation(
     @Param('id', ParseIntPipe) conversationId: number,
     @CurrentUser('user') user: User,
-    @Body() updateConversationDto: UpdateConversationDto
+    @Body() updateConversationDto: UpdateConversationDto,
   ) {
     return this.conversationsService.updateConversation(
       conversationId,
       user.id,
-      updateConversationDto
+      updateConversationDto,
     );
   }
 
   @Delete(':id')
   async deleteConversation(
     @Param('id', ParseIntPipe) conversationId: number,
-    @CurrentUser('user') user: User
+    @CurrentUser('user') user: User,
   ) {
-    return this.conversationsService.deleteConversation(conversationId, user.id);
+    return this.conversationsService.deleteConversation(
+      conversationId,
+      user.id,
+    );
   }
 
   @Post(':conversationId/members')
@@ -77,17 +83,25 @@ export class ConversationsController {
   async addMembers(
     @Param('conversationId', ParseIntPipe) conversationId: number,
     @CurrentUser('user') user: User,
-    @Body() addMembersDto: AddMembersDto
+    @Body() addMembersDto: AddMembersDto,
   ) {
-    return this.conversationsService.addMembers(conversationId, user.id, addMembersDto);
+    return this.conversationsService.addMembers(
+      conversationId,
+      user.id,
+      addMembersDto,
+    );
   }
 
-  @Delete(':conversationId/member/:memberId')
+  @Delete(':conversationId/members/:memberId')
   async deleteMember(
     @Param('conversationId', ParseIntPipe) conversationId: number,
     @Param('memberId', ParseIntPipe) memberId: number,
-    @CurrentUser('user') user: User
+    @CurrentUser('user') user: User,
   ) {
-    return this.conversationsService.deleteMember(conversationId, user.id, memberId);
+    return this.conversationsService.deleteMember(
+      conversationId,
+      user.id,
+      memberId,
+    );
   }
 }

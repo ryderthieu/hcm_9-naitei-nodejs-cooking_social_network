@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { Info, MessageSquareText, Reply, Trash2 } from "lucide-react";
+import { Info, MessageSquareText, Reply, Trash2, Video } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { API_CONSTANTS } from "../../../constants/constants";
 
@@ -14,22 +14,35 @@ import {
   MessageReactions,
   ReactionSummary,
   SeenByAvatars,
+  InfoSidebar,
+  ConversationEditModal,
+  CreateConversation,
+  SearchMessage,
 } from "../../../components/Message";
 import type {
   Conversation,
   Member,
   Message,
   MessagesResponse,
+  MessageType,
 } from "../../../types/conversation.type";
 import type { User } from "../../../types/auth.type";
 import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 import {
   getConversations,
   getConversation,
+  updateConversation,
+  removeMemberFromConversation,
+  addMemberToConversation,
 } from "../../../services/conversation.service";
 import { useAuth } from "../../../contexts/AuthContext";
-import { getMessages } from "../../../services/message.service";
+import {
+  getMessageContext,
+  getMessages,
+} from "../../../services/message.service";
 import { DeleteConfirm } from "../../../components/popup";
+import { uploadFiles } from "../../../services/upload.service";
+import { Members } from "../../../components/Message/Members";
 
 const convertUserToMember = (user: User): Member => ({
   id: user.id,
@@ -78,6 +91,10 @@ export default function MessagePage() {
     Record<number, number[]>
   >({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [createConversationModalOpen, setCreateConversationModalOpen] =
+    useState(false);
+  const [leaveConversationModalOpen, setLeaveConversationModalOpen] =
+    useState(false);
   const [messageToDelete, setMessageToDelete] = useState<{
     id: number;
     conversationId: number;
@@ -86,7 +103,15 @@ export default function MessagePage() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<
     number | null
   >(null);
-
+  const [isContextMode, setIsContextMode] = useState<boolean>(false);
+  const [isLoadingContextBefore, setIsLoadingContextBefore] =
+    useState<boolean>(false);
+  const [isLoadingContextAfter, setIsLoadingContextAfter] =
+    useState<boolean>(false);
+  const [hasMoreMessagesBefore, setHasMoreMessagesBefore] =
+    useState<boolean>(true);
+  const [hasMoreMessagesAfter, setHasMoreMessagesAfter] =
+    useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef<boolean>(true);
@@ -94,8 +119,11 @@ export default function MessagePage() {
   const prevScrollTopRef = useRef<number>(0);
   const lastScrollTopRef = useRef<number>(0);
   const isProgrammaticScrollRef = useRef<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const [showEditConversationModal, setShowEditConversationModal] =
+    useState(false);
+  const [sidebarTab, setSidebarTab] = useState<
+    "members" | "search" | "media" | "link" | null
+  >(null);
   const { user, loading: isAuthLoading } = useAuth();
 
   const currentUserAsMember: Member | null = user
@@ -152,7 +180,7 @@ export default function MessagePage() {
   };
 
   const [page, setPage] = useState<number>(1);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
   const [limit] = useState<number>(20);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
@@ -198,32 +226,128 @@ export default function MessagePage() {
   };
 
   const loadOlderMessages = async () => {
+    if (isContextMode) return;
     if (!selectedConversationId || !hasNextPage || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+
     try {
-      setIsLoadingMore(true);
       const container = messageContainerRef.current;
-      if (container) {
-        prevScrollHeightRef.current = container.scrollHeight;
-        prevScrollTopRef.current = container.scrollTop;
-      }
+      const prevHeight = container?.scrollHeight ?? 0;
+      const prevTop = container?.scrollTop ?? 0;
+
       const nextPage = page + 1;
       const response: MessagesResponse = await getMessages(
         Number(selectedConversationId),
         { page: nextPage, limit }
       );
-      if (response && Array.isArray(response.messages)) {
-        setMessages((prev) => [...response.messages, ...prev]);
-        setPage(response.meta?.currentPage || nextPage);
-        setHasNextPage(!!response.meta?.hasNextPage);
-        setTimeout(() => {
+
+      if (response?.messages?.length) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const unique = response.messages.filter(
+            (m) => !existingIds.has(m.id)
+          );
+          return [...unique, ...prev];
+        });
+
+        setPage(response.meta?.currentPage ?? nextPage);
+        setHasNextPage(Boolean(response.meta?.hasNextPage));
+
+        requestAnimationFrame(() => {
           const c = messageContainerRef.current;
           if (!c) return;
-          const delta = c.scrollHeight - prevScrollHeightRef.current;
-          c.scrollTop = prevScrollTopRef.current + delta;
-        }, 0);
+          const delta = c.scrollHeight - prevHeight;
+          c.scrollTop = prevTop + delta;
+        });
       }
     } finally {
       setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreContextBefore = async () => {
+    if (
+      !selectedConversationId ||
+      isLoadingContextBefore ||
+      !hasMoreMessagesBefore
+    )
+      return;
+
+    try {
+      setIsLoadingContextBefore(true);
+
+      const container = messageContainerRef.current;
+      if (container) {
+        prevScrollHeightRef.current = container.scrollHeight;
+        prevScrollTopRef.current = container.scrollTop;
+      }
+
+      const first = messages[0];
+      if (!first) return;
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        first.id,
+        { before: 10, after: 0 }
+      );
+
+      setHasMoreMessagesBefore(response.meta.hasMoreMessagesBefore);
+
+      const filtered = response.messages.filter(
+        (m: Message) => m.id !== first.id
+      );
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const unique = filtered.filter((m: Message) => !existingIds.has(m.id));
+        return unique.length ? [...unique, ...prev] : prev;
+      });
+
+      setTimeout(() => {
+        const c = messageContainerRef.current;
+        if (!c) return;
+        const delta = c.scrollHeight - prevScrollHeightRef.current;
+        c.scrollTop = prevScrollTopRef.current + delta;
+      }, 100);
+    } finally {
+      setIsLoadingContextBefore(false);
+    }
+  };
+
+  const loadMoreContextAfter = async () => {
+    if (
+      !selectedConversationId ||
+      isLoadingContextAfter ||
+      !hasMoreMessagesAfter
+    )
+      return;
+
+    try {
+      setIsLoadingContextAfter(true);
+
+      const last = messages[messages.length - 1];
+      if (!last) return;
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        last.id,
+        { before: 0, after: 10 }
+      );
+
+      setHasMoreMessagesAfter(response.meta.hasMoreMessagesAfter);
+
+      const filtered = response.messages.filter(
+        (m: Message) => m.id !== last.id
+      );
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const unique = filtered.filter((m: Message) => !existingIds.has(m.id));
+        return unique.length ? [...prev, ...unique] : prev;
+      });
+    } finally {
+      setIsLoadingContextAfter(false);
     }
   };
 
@@ -240,6 +364,120 @@ export default function MessagePage() {
 
   const { conversationId } = useParams<{ conversationId: string }>();
 
+  const handleRemoveMember = async (member: Member) => {
+    try {
+      await removeMemberFromConversation(
+        Number(selectedConversationId),
+        member.id
+      );
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(selectedConversationId),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã xóa thành viên ${member.firstName} ${member.lastName} khỏi cuộc trò chuyện.`,
+      });
+    } catch (error) {
+      setError("Lỗi khi xóa thành viên");
+    }
+  };
+
+  const handleSearchMessages = async (searchText: string, page: number = 1) => {
+    try {
+      const response = await getMessages(Number(selectedConversationId), {
+        search: searchText,
+        page,
+      });
+      return {
+        ...response,
+        searchInfo: response?.searchInfo || {
+          query: searchText,
+          hasSearch: !!searchText?.trim(),
+        },
+      };
+    } catch (error) {
+      setError("Lỗi khi tìm kiếm tin nhắn");
+    }
+  };
+
+  const handleShowContext = async (messageId: number) => {
+    try {
+      setIsContextMode(true);
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        messageId,
+        {
+          before: 10,
+          after: 10,
+        }
+      );
+      setMessages(response.messages);
+
+      setTimeout(() => {
+        const target = document.getElementById(
+          `message-${response.targetMessageId}`
+        );
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          setHighlightedMessageId(response.targetMessageId);
+          setTimeout(() => {
+            setHighlightedMessageId(null);
+          }, 5000);
+        } else if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+        }
+      }, 100);
+    } catch (error) {
+      setError("Lỗi khi lấy nội dung tin nhắn");
+    }
+  };
+
+  const handleCreateConversation = async (conversation: Conversation) => {
+    socketRef.current?.emit("send_message", {
+      conversationId: Number(conversation.id),
+      type: "SYSTEM" as MessageType,
+      content: `${user?.firstName} ${user?.lastName} đã tạo cuộc trò chuyện.`,
+    });
+    setCreateConversationModalOpen(false);
+  };
+
+  const handleAddMember = async (member: Member) => {
+    try {
+      const res = await addMemberToConversation(
+        Number(selectedConversationId),
+        member.id
+      );
+
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(res.conversation.id),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã thêm thành viên ${member.firstName} ${member.lastName} vào cuộc trò chuyện.`,
+      });
+    } catch (error) {
+      setError("Lỗi khi thêm thành viên");
+    }
+  };
+  const handleLeaveConversation = async () => {
+    try {
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(selectedConversationId),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã rời khỏi cuộc trò chuyện.`,
+      });
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== Number(selectedConversationId))
+      );
+      await removeMemberFromConversation(
+        Number(selectedConversationId),
+        currentUserAsMember?.id || 0
+      );
+
+      navigate("/messages");
+    } catch (error) {
+      setError("Lỗi khi rời khỏi cuộc trò chuyện");
+    } finally {
+      setLeaveConversationModalOpen(false);
+    }
+  };
   useEffect(() => {
     if (conversationId) {
       setSelectedConversationId(conversationId);
@@ -277,6 +515,10 @@ export default function MessagePage() {
   }, [selectedConversationId]);
 
   useEffect(() => {
+    setHasMoreMessagesBefore(true);
+    setHasMoreMessagesAfter(true);
+    setPage(1);
+
     const container = messageContainerRef.current;
     if (!container) return;
     const handleScroll = () => {
@@ -286,13 +528,20 @@ export default function MessagePage() {
       isAtBottomRef.current = distanceFromBottom < 80;
       lastScrollTopRef.current = scrollTop;
       if (scrollTop <= 80) {
-        loadOlderMessages();
+        if (isContextMode) {
+          loadMoreContextBefore();
+        } else {
+          loadOlderMessages();
+        }
+      }
+      if (distanceFromBottom <= 80 && isContextMode) {
+        loadMoreContextAfter();
       }
     };
     container.addEventListener("scroll", handleScroll);
     isAtBottomRef.current = true;
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, isContextMode, messages.length]);
 
   useEffect(() => {
     if (!user) return;
@@ -345,22 +594,45 @@ export default function MessagePage() {
         selectedConversationId &&
         message.conversationId.toString() === selectedConversationId
       ) {
-        setMessages((prev) => [...prev, message]);
+        if (message.senderUser.id !== user?.id) {
+          setMessages((prev) => [...prev, message]);
 
-        if (message.senderUser.id !== user.id) {
           socket.emit("mark_as_seen", {
             conversationId: message.conversationId,
           });
+
+          if (!isAtBottomRef.current) {
+            setHasNewMessage(true);
+          }
+        } else {
+          if (message.type === "MEDIA") {
+            setMessages((prev) => [...prev, message]);
+          } else {
+            setMessages((prev) => {
+              const tempMessageIndex = prev.findIndex((msg) => {
+                if (msg.type === "TEXT" && msg.senderUser.id === user?.id) {
+                  return msg.content === message.content;
+                }
+                return false;
+              });
+
+              if (tempMessageIndex !== -1) {
+                const updated = [...prev];
+                updated[tempMessageIndex] = message;
+                return updated;
+              } else {
+                return [...prev, message];
+              }
+            });
+          }
         }
 
-        if (isAtBottomRef.current || message.senderUser.id === user.id) {
+        if (isAtBottomRef.current || message.senderUser.id === user?.id) {
           setTimeout(() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
             }
           }, 0);
-        } else {
-          setHasNewMessage(true);
         }
       }
 
@@ -414,8 +686,6 @@ export default function MessagePage() {
           selectedConversationId &&
           String(conversationId) === selectedConversationId
         ) {
-          console.log("user", user);
-          console.log("messages", messages);
           setMessages((prev) =>
             prev.map((m) => {
               const exists = m.seenBy?.some((s) => s.userId === user.id);
@@ -460,13 +730,18 @@ export default function MessagePage() {
           async () => {
             try {
               const updatedConversation = await getConversation(conversationId);
-
               if (updatedConversation) {
                 setConversations((prev) => {
-                  const idx = prev.findIndex((c) => c.id === conversationId);
-                  if (idx === -1) return prev;
-
                   const updated = [...prev];
+
+                  const idx = prev.findIndex((c) => c.id === conversationId);
+                  if (idx === -1) {
+                    if (updatedConversation.lastMessage) {
+                      return [updatedConversation, ...updated];
+                    } else {
+                      return [...updated, updatedConversation];
+                    }
+                  }
 
                   updated[idx] = updatedConversation;
 
@@ -521,19 +796,43 @@ export default function MessagePage() {
     setNewMessage(value);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !socketRef.current || !selectedConversationId)
       return;
+
+    const messageText = newMessage.trim();
+
+    const tempMessage: Message = {
+      id: Date.now(),
+      content: messageText,
+      type: "TEXT" as MessageType,
+      conversationId: parseInt(selectedConversationId),
+      sender: user!.id,
+      senderUser: {
+        id: user!.id,
+        username: user!.username,
+        firstName: user!.firstName,
+        lastName: user!.lastName,
+        avatar: user!.avatar || DEFAULT_AVATAR_URL,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      replyOf: replyingTo?.id || null,
+      replyToMessage: replyingTo,
+      reactions: [],
+      seenBy: [],
+    };
+    setMessages((prev) => [tempMessage, ...prev]);
+
     const payload = {
       conversationId: Number(selectedConversationId),
-      content: newMessage.trim(),
-      type: "TEXT" as const,
+      content: messageText,
+      type: "TEXT" as MessageType,
       replyOf: replyingTo?.id || null,
     };
     socketRef.current.emit("send_message", payload);
     setNewMessage("");
     setReplyingTo(null);
-
     handleTyping(false);
 
     setTimeout(() => {
@@ -544,6 +843,53 @@ export default function MessagePage() {
     isAtBottomRef.current = true;
     setHasNewMessage(false);
   };
+
+  const uploadSingleFile = async (file: File) => {
+    if (!socketRef.current || !selectedConversationId) return;
+
+    const preview = URL.createObjectURL(file);
+
+    try {
+      const { uploadFiles } = await import("../../../services/upload.service");
+      const results = await uploadFiles([file]);
+
+      if (results && results.length > 0) {
+        const result = results[0];
+        const isVideoResult =
+          (result.resourceType || "").toLowerCase() === "video";
+        const contentPayload = JSON.stringify({
+          url: result.url,
+          kind: isVideoResult ? "VIDEO" : "IMAGE",
+        });
+
+        socketRef.current.emit("send_message", {
+          conversationId: Number(selectedConversationId),
+          content: contentPayload,
+          type: "MEDIA" as MessageType,
+          replyOf: replyingTo?.id || null,
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to upload file ${file.name}:`, error);
+    } finally {
+      setTimeout(() => {
+        URL.revokeObjectURL(preview);
+      }, 1000);
+    }
+
+    setReplyingTo(null);
+  };
+
+  const handleFilesSelected = useCallback(
+    (files: File[]) => {
+      if (!socketRef.current || !selectedConversationId) return;
+
+      files.forEach((file) => {
+        uploadSingleFile(file);
+      });
+    },
+    [selectedConversationId, replyingTo, user]
+  );
 
   const handleDeleteMessage = (message: Message) => {
     setMessageToDelete({
@@ -568,25 +914,44 @@ export default function MessagePage() {
     setReplyingTo(message);
   };
 
-  const handleReplyClick = (replyToMessageId: number) => {
+  const handleReplyClick = async (replyToMessageId: number) => {
     const targetMessage = messages.find((msg) => msg.id === replyToMessageId);
-    if (!targetMessage) return;
 
-    setHighlightedMessageId(replyToMessageId);
-
-    const messageElement = document.getElementById(
-      `message-${replyToMessageId}`
-    );
-    if (messageElement && messageContainerRef.current) {
-      messageElement.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    if (targetMessage) {
+      setHighlightedMessageId(replyToMessageId);
+      const element = document.getElementById(`message-${replyToMessageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      setTimeout(() => setHighlightedMessageId(null), 5000);
+      return;
     }
 
-    setTimeout(() => {
-      setHighlightedMessageId(null);
-    }, 3000);
+    try {
+      setIsContextMode(true);
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        replyToMessageId,
+        { before: 10, after: 10 }
+      );
+
+      setMessages(response.messages);
+      setHasMoreMessagesBefore(response.meta.hasMoreMessagesBefore);
+      setHasMoreMessagesAfter(response.meta.hasMoreMessagesAfter);
+
+      setTimeout(() => {
+        const element = document.getElementById(`message-${replyToMessageId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          setHighlightedMessageId(replyToMessageId);
+        }
+      }, 100);
+
+      setTimeout(() => setHighlightedMessageId(null), 5000);
+    } catch (err) {
+      setError("Lỗi khi lấy nội dung trả lời");
+      console.error(err);
+    }
   };
 
   const handleReactionToggle = (
@@ -631,6 +996,7 @@ export default function MessagePage() {
   };
 
   const shouldShowSeenBy = (message: Message, isMyMessage: boolean) => {
+    if (message.type === "SYSTEM") return false;
     if (!message.seenBy || message.seenBy.length === 0) return false;
 
     if (!isMyMessage) {
@@ -640,6 +1006,46 @@ export default function MessagePage() {
 
     const usersWhoLastSeenThis = getUsersWhoLastSeenThisMessage(message);
     return usersWhoLastSeenThis.length > 0;
+  };
+
+  const handleUpdateConversation = async (
+    conversationId: number,
+    data: {
+      name?: string;
+      avatar?: File;
+    }
+  ) => {
+    let success: boolean = false;
+    try {
+      if (!data.avatar && data.name === selectedConversation?.name) {
+        setError("Vui lòng nhập tên hoặc chọn ảnh");
+        return;
+      }
+      const avatarUpload = data.avatar
+        ? await uploadFiles([data.avatar])
+        : null;
+      const avatarUrl: string = avatarUpload ? avatarUpload[0].url : "";
+      avatarUrl
+        ? await updateConversation(conversationId, {
+            name: data.name,
+            avatar: avatarUrl,
+          })
+        : await updateConversation(conversationId, {
+            name: data.name,
+          });
+
+      socketRef.current?.emit("send_message", {
+        conversationId,
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã cập nhật cuộc trò chuyện.`,
+      });
+      setError(null);
+      success = true;
+    } catch (error) {
+      setError("Có lỗi xảy ra khi cập nhật cuộc trò chuyện");
+    } finally {
+      if (success) setShowEditConversationModal(false);
+    }
   };
 
   useEffect(() => {
@@ -681,7 +1087,7 @@ export default function MessagePage() {
   }
 
   return (
-    <div className="fixed inset-0 flex bg-gray-100 h-screen">
+    <div className="fixed inset-0 flex bg-gray-100 h-screen items-center justify-center">
       <ConversationList
         conversations={conversations}
         filteredConversations={filteredConversations}
@@ -691,12 +1097,13 @@ export default function MessagePage() {
         user={currentUserAsMember}
         onConversationSelect={handleConversationSelect}
         onlineUserIds={onlineUserIds}
+        onAddConversation={() => setCreateConversationModalOpen(true)}
       />
 
       <div className="flex-1 flex h-full">
         <div
           className={`flex flex-col bg-white transition-all duration-300 ${
-            showInfoSidebar ? "w-[65%]" : "w-full"
+            showInfoSidebar ? "w-[70%]" : "w-full"
           }`}
         >
           {selectedConversationId && selectedConversation ? (
@@ -774,6 +1181,20 @@ export default function MessagePage() {
                             getSenderAsMember(previousMessage).id !==
                               sender.id);
 
+                        if (message.type === "SYSTEM") {
+                          return (
+                            <div
+                              key={message.id}
+                              id={`message-${message.id}`}
+                              className="flex justify-center"
+                            >
+                              <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                {message.content}
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={message.id}
@@ -812,7 +1233,7 @@ export default function MessagePage() {
                               )}
 
                               <div className="flex items-center space-x-2">
-                                <div className="max-w-[70%]">
+                                <div className="">
                                   <Tooltip
                                     content={`${new Date(
                                       message.createdAt
@@ -832,9 +1253,11 @@ export default function MessagePage() {
                                     <div className="relative">
                                       <div
                                         className={`rounded-lg p-3 cursor-pointer ${
-                                          isMyMessage
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-200 text-gray-800"
+                                          message.type === "TEXT"
+                                            ? isMyMessage
+                                              ? "bg-blue-500 text-white"
+                                              : "bg-gray-200 text-gray-800"
+                                            : "p-0 bg-transparent"
                                         }`}
                                       >
                                         {message.replyToMessage && (
@@ -861,13 +1284,225 @@ export default function MessagePage() {
                                               }
                                             </div>
                                             <div className="truncate">
-                                              {message.replyToMessage.content}
+                                              {(() => {
+                                                const rt =
+                                                  message.replyToMessage?.type;
+                                                if (rt === "MEDIA") {
+                                                  try {
+                                                    const m = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return m.kind === "VIDEO"
+                                                      ? "[Video]"
+                                                      : "[Hình ảnh]";
+                                                  } catch {
+                                                    return "[Media]";
+                                                  }
+                                                }
+                                                if (rt === "POST") {
+                                                  try {
+                                                    const d = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return d.caption
+                                                      ? d.caption
+                                                      : "[Bài viết]";
+                                                  } catch {
+                                                    return "[Bài viết]";
+                                                  }
+                                                }
+                                                if (rt === "RECIPE") {
+                                                  try {
+                                                    const d = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return d.title
+                                                      ? d.title
+                                                      : "[Công thức]";
+                                                  } catch {
+                                                    return "[Công thức]";
+                                                  }
+                                                }
+                                                return message.replyToMessage
+                                                  .content;
+                                              })()}
                                             </div>
                                           </div>
                                         )}
-                                        <p className="text-sm">
-                                          {message.content}
-                                        </p>
+                                        {(() => {
+                                          if (message.type === "TEXT") {
+                                            return (
+                                              <p className="text-sm">
+                                                {message.content}
+                                              </p>
+                                            );
+                                          }
+                                          if (message.type === "MEDIA") {
+                                            try {
+                                              const media = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                url: string;
+                                                kind?: string;
+                                                error?: boolean;
+                                                fileName?: string;
+                                              };
+                                              const kind = (
+                                                media.kind || "IMAGE"
+                                              ).toUpperCase();
+
+                                              if (media.error) {
+                                                return (
+                                                  <div className="relative rounded-lg overflow-hidden max-h-72 border-2 border-red-300">
+                                                    {kind === "VIDEO" ? (
+                                                      <div className="w-64 h-36 bg-red-50 rounded-lg flex items-center justify-center">
+                                                        <Video
+                                                          size={32}
+                                                          className="text-red-400"
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      <img
+                                                        src={media.url}
+                                                        alt="failed"
+                                                        className="rounded-lg max-h-72 object-contain opacity-50"
+                                                      />
+                                                    )}
+                                                    <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                                                      <div className="bg-red-100 rounded-lg p-3 text-center">
+                                                        <p className="text-red-600 text-sm font-medium">
+                                                          Upload thất bại
+                                                        </p>
+                                                        <p className="text-red-500 text-xs">
+                                                          {media.fileName}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+
+                                              if (kind === "VIDEO") {
+                                                return (
+                                                  <video
+                                                    src={media.url}
+                                                    controls
+                                                    className="rounded-lg max-h-72"
+                                                  />
+                                                );
+                                              }
+                                              return (
+                                                <img
+                                                  src={media.url}
+                                                  alt="media"
+                                                  className="rounded-lg max-h-72 object-contain"
+                                                />
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm break-words">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          if (message.type === "POST") {
+                                            try {
+                                              const data = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                id: number;
+                                                caption?: string;
+                                                slug?: string | null;
+                                              };
+                                              return (
+                                                <a
+                                                  href={
+                                                    data.slug
+                                                      ? `/post/${data.slug}`
+                                                      : `/post/${data.id}`
+                                                  }
+                                                  className={`block p-3 rounded-lg border ${
+                                                    isMyMessage
+                                                      ? "bg-blue-400/40 border-blue-200"
+                                                      : "bg-gray-100 border-gray-300"
+                                                  }`}
+                                                >
+                                                  <div className="text-sm font-medium mb-1">
+                                                    Chia sẻ bài viết
+                                                  </div>
+                                                  {data.caption ? (
+                                                    <div className="text-sm line-clamp-2">
+                                                      {data.caption}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-sm italic">
+                                                      Xem bài viết
+                                                    </div>
+                                                  )}
+                                                </a>
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          if (message.type === "RECIPE") {
+                                            try {
+                                              const data = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                id: number;
+                                                title?: string;
+                                                slug?: string | null;
+                                              };
+                                              return (
+                                                <a
+                                                  href={
+                                                    data.slug
+                                                      ? `/recipes/${data.slug}`
+                                                      : `/recipes/${data.id}`
+                                                  }
+                                                  className={`block p-3 rounded-lg border ${
+                                                    isMyMessage
+                                                      ? "bg-blue-400/40 border-blue-200"
+                                                      : "bg-gray-100 border-gray-300"
+                                                  }`}
+                                                >
+                                                  <div className="text-sm font-medium mb-1">
+                                                    Chia sẻ công thức
+                                                  </div>
+                                                  {data.title ? (
+                                                    <div className="text-sm line-clamp-2">
+                                                      {data.title}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-sm italic">
+                                                      Xem công thức
+                                                    </div>
+                                                  )}
+                                                </a>
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          return (
+                                            <p className="text-sm">
+                                              {message.content}
+                                            </p>
+                                          );
+                                        })()}
                                       </div>
 
                                       <ReactionSummary
@@ -1012,7 +1647,6 @@ export default function MessagePage() {
                 user={currentUserAsMember}
                 isShowIconPicker={isShowIconPicker}
                 setIsShowIconPicker={setIsShowIconPicker}
-                fileInputRef={fileInputRef}
                 onChange={handleChangeMessage}
                 onSend={handleSendMessage}
                 onTyping={handleTyping}
@@ -1020,6 +1654,7 @@ export default function MessagePage() {
                 onEmojiSelect={(emoji) => {
                   handleChangeMessage(newMessage + emoji);
                 }}
+                onFilesSelected={handleFilesSelected}
               />
             </>
           ) : (
@@ -1029,16 +1664,75 @@ export default function MessagePage() {
 
         <div
           className={`bg-white border-l border-gray-200 transition-all duration-300 relative ${
-            showInfoSidebar ? "w-[35%]" : "w-0 opacity-0 overflow-hidden"
+            showInfoSidebar ? "w-[30%]" : "w-0 opacity-0 overflow-hidden"
           }`}
-        ></div>
+        >
+          {selectedConversation &&
+            (sidebarTab === "members" ? (
+              <Members
+                members={selectedConversation.members}
+                onRemoveMember={handleRemoveMember}
+                onAddMember={handleAddMember}
+                onBack={() => {
+                  setSidebarTab(null);
+                }}
+              />
+            ) : sidebarTab === "search" ? (
+              <SearchMessage
+                onSearch={handleSearchMessages}
+                onShowContext={handleShowContext}
+                onClose={() => {
+                  setSidebarTab(null);
+                  setIsContextMode(false);
+                  if (selectedConversationId) {
+                    fetchMessages(selectedConversationId);
+                  }
+                }}
+                conversation={selectedConversation}
+              />
+            ) : (
+              <InfoSidebar
+                conversation={selectedConversation}
+                onEditConversation={() => {
+                  setShowEditConversationModal(true);
+                }}
+                onClickMembers={() => {
+                  setSidebarTab("members");
+                }}
+                onClickSearch={() => {
+                  setSidebarTab("search");
+                }}
+                onClickMedia={() => {
+                  setSidebarTab("media");
+                }}
+                onClickLink={() => {
+                  setSidebarTab("link");
+                }}
+                onClickLeave={() => {
+                  setLeaveConversationModalOpen(true);
+                }}
+              />
+            ))}
+        </div>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
+      <ConversationEditModal
+        conversation={selectedConversation || ({} as Conversation)}
+        isOpen={showEditConversationModal}
+        onClose={() => {
+          setShowEditConversationModal(false);
+        }}
+        onSave={handleUpdateConversation}
+        error={error}
+      />
+
+      <DeleteConfirm
+        isOpen={leaveConversationModalOpen}
+        onClose={() => {
+          setLeaveConversationModalOpen(false);
+        }}
+        onConfirm={handleLeaveConversation}
+        type="leave_conversation"
       />
 
       <DeleteConfirm
@@ -1049,6 +1743,32 @@ export default function MessagePage() {
         }}
         onConfirm={confirmDeleteMessage}
         type="message"
+      />
+
+      <CreateConversation
+        isOpen={createConversationModalOpen}
+        onClose={() => {
+          setCreateConversationModalOpen(false);
+        }}
+        onCreated={handleCreateConversation}
+      />
+
+      <DeleteConfirm
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setMessageToDelete(null);
+        }}
+        onConfirm={confirmDeleteMessage}
+        type="message"
+      />
+
+      <CreateConversation
+        isOpen={createConversationModalOpen}
+        onClose={() => {
+          setCreateConversationModalOpen(false);
+        }}
+        onCreated={handleCreateConversation}
       />
     </div>
   );

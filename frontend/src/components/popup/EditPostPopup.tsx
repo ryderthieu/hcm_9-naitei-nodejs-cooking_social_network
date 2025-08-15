@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect } from "react";
 import { XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { FaceSmileIcon } from "@heroicons/react/24/outline";
-import { ChefHat } from 'lucide-react';
-import EmojiPicker from 'emoji-picker-react';
-import type { PostEntity, PostMedia, PostRecipeRef } from "../../types/post.type";
+import { ChefHat } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
+import type {
+  PostEntity,
+  PostMedia,
+  PostRecipeRef,
+} from "../../types/post.type";
 import { updatePost } from "../../services/post.service";
-import { showErrorAlert } from "../../utils/errorHandler";
+import { AlertPopup } from "./index";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import RecipeSelectionModal from "./RecipeSelectionModal";
 import type { RecipeListItem } from "../../services/recipe.service";
 import { uploadFiles } from "../../services/upload.service";
+import { getAccessToken } from "../../services/api.service";
 
 interface EditPostPopupProps {
   post: PostEntity;
@@ -23,12 +29,17 @@ export default function EditPostPopup({
   onClose,
   onUpdate,
 }: EditPostPopupProps) {
+  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const [caption, setCaption] = useState(post.caption || "");
   const [media, setMedia] = useState<PostMedia[]>(post.media || []);
-  const [newMedia, setNewMedia] = useState<{ file: File; preview: string }[]>([]);
+  const [newMedia, setNewMedia] = useState<{ file: File; preview: string }[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<PostRecipeRef | null>(post.recipe || null);
+  const [selectedRecipe, setSelectedRecipe] = useState<PostRecipeRef | null>(
+    post.recipe || null
+  );
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -48,50 +59,56 @@ export default function EditPostPopup({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
         setShowEmojiPicker(false);
       }
     };
 
     if (showEmojiPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showEmojiPicker]);
 
   const handleEmojiClick = (emojiObject: any) => {
-    setCaption(prev => prev + emojiObject.emoji);
+    setCaption((prev) => prev + emojiObject.emoji);
     setShowEmojiPicker(false);
   };
 
   const toggleEmojiPicker = () => {
-    setShowEmojiPicker(prev => !prev);
+    setShowEmojiPicker((prev) => !prev);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
-    
-    const newMediaFiles = imageFiles.map(file => ({
+    const imageFiles = Array.from(files).filter(
+      (file) => file.type.startsWith("image/") || file.type.startsWith("video/")
+    );
+
+    const newMediaFiles = imageFiles.map((file) => ({
       file,
-      preview: URL.createObjectURL(file)
+      preview: URL.createObjectURL(file),
     }));
 
-    setNewMedia(prev => [...prev, ...newMediaFiles]);
-    
+    setNewMedia((prev) => [...prev, ...newMediaFiles]);
+
     if (event.target) {
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
   const removeExistingMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
+    setMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeNewMedia = (index: number) => {
-    setNewMedia(prev => {
+    setNewMedia((prev) => {
       const newArray = prev.filter((_, i) => i !== index);
       URL.revokeObjectURL(prev[index].preview);
       return newArray;
@@ -119,6 +136,7 @@ export default function EditPostPopup({
       const uploadedMedia = await uploadFiles(files);
       return uploadedMedia;
     } catch (error) {
+      console.error("Upload failed", error);
       throw error;
     }
   };
@@ -137,16 +155,22 @@ export default function EditPostPopup({
       let finalMedia = [...media];
 
       if (newMedia.length > 0) {
-        const files = newMedia.map(item => item.file);
+        const files = newMedia.map((item) => item.file);
         const uploadedMedia = await uploadMediaToCloudinary(files);
         setUploadProgress(50);
-        
-        const uploadedMediaItems: PostMedia[] = uploadedMedia.map((item: any, index: number) => ({
-          id: Date.now() + index,
-          url: item.url,
-          type: (item.resourceType || 'image').toUpperCase() as 'IMAGE' | 'VIDEO',
-          public_id: item.publicId,
-        }));
+
+        const uploadedMediaItems: PostMedia[] = Array.isArray(uploadedMedia)
+          ? uploadedMedia.map((item: any, index: number) => ({
+              id: Date.now() + index,
+              url: item.url || item.secure_url,
+              type: (
+                item.resourceType ||
+                item.resource_type ||
+                "image"
+              ).toUpperCase() as "IMAGE" | "VIDEO",
+              public_id: item.publicId || item.public_id,
+            }))
+          : [];
 
         finalMedia = [...finalMedia, ...uploadedMediaItems];
         setUploadProgress(80);
@@ -160,18 +184,20 @@ export default function EditPostPopup({
       if (selectedRecipe?.id) {
         updateData.recipeId = selectedRecipe.id;
       }
-      
+
       const updatedPost = await updatePost(post.id, updateData);
-      
+
       setUploadProgress(100);
-      setTimeout(() => {
-        onUpdate(updatedPost.post);
-        onClose();
-      }, 500);
+      showSuccess("Chỉnh sửa bài viết thành công!", {
+        onConfirm: () => {
+          onUpdate(updatedPost.post);
+          onClose();
+        },
+      });
     } catch (error) {
       const errorMessage = "Lỗi khi cập nhật bài viết";
       setError(errorMessage);
-      showErrorAlert(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -187,7 +213,9 @@ export default function EditPostPopup({
           <span className="text-sm font-medium text-gray-700">
             Đang tải lên...
           </span>
-          <span className="text-sm font-medium text-orange-600">{uploadProgress}%</span>
+          <span className="text-sm font-medium text-orange-600">
+            {uploadProgress}%
+          </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
@@ -206,7 +234,9 @@ export default function EditPostPopup({
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
           <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
-            <h2 className="text-2xl font-bold text-gray-800">Chỉnh sửa bài viết</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Chỉnh sửa bài viết
+            </h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/50 rounded-full transition-colors"
@@ -251,7 +281,10 @@ export default function EditPostPopup({
                     <FaceSmileIcon className="w-5 h-5" />
                   </button>
                   {showEmojiPicker && (
-                    <div ref={emojiPickerRef} className="absolute top-full right-0 mt-2 z-10">
+                    <div
+                      ref={emojiPickerRef}
+                      className="absolute top-full right-0 mt-2 z-10"
+                    >
                       <EmojiPicker
                         onEmojiClick={handleEmojiClick}
                         width={300}
@@ -272,8 +305,10 @@ export default function EditPostPopup({
                       <ChefHat className="w-5 h-5 text-orange-600" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium">{selectedRecipe.title}</h4>
-                      <p className="text-sm text-orange-600/70">Chưa có độ khó</p>
+                      <h4 className="font-medium">{selectedRecipe?.title}</h4>
+                      <p className="text-sm text-orange-600/70">
+                        Chưa có độ khó
+                      </p>
                     </div>
                     <button
                       onClick={handleRemoveRecipe}
@@ -292,7 +327,10 @@ export default function EditPostPopup({
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
                   {media.map((item, index) => (
-                    <div key={`existing-${index}`} className="relative group aspect-square">
+                    <div
+                      key={`existing-${index}`}
+                      className="relative group aspect-square"
+                    >
                       {item.type === "IMAGE" ? (
                         <img
                           src={item.url}
@@ -316,8 +354,11 @@ export default function EditPostPopup({
                   ))}
 
                   {newMedia.map((item, index) => (
-                    <div key={`new-${index}`} className="relative group aspect-square">
-                      {item.file.type.startsWith('image/') ? (
+                    <div
+                      key={`new-${index}`}
+                      className="relative group aspect-square"
+                    >
+                      {item.file.type.startsWith("image/") ? (
                         <img
                           src={item.preview}
                           alt={`new-${index}`}
@@ -341,7 +382,9 @@ export default function EditPostPopup({
 
                   <label className="cursor-pointer aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-orange-500 transition-colors flex flex-col items-center justify-center gap-2">
                     <PhotoIcon className="w-8 h-8 text-gray-400" />
-                    <span className="text-sm text-gray-500">Thêm ảnh/video</span>
+                    <span className="text-sm text-gray-500">
+                      Thêm ảnh/video
+                    </span>
                     <input
                       type="file"
                       multiple
@@ -354,7 +397,9 @@ export default function EditPostPopup({
               </div>
 
               <div className="flex items-center justify-between mb-6 p-4 border border-gray-200 rounded-xl bg-gray-50">
-                <span className="text-sm font-medium text-gray-600">Thêm vào bài viết</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Thêm vào bài viết
+                </span>
                 <button
                   onClick={handleAttachRecipe}
                   className="p-2 hover:bg-white rounded-lg transition-colors flex items-center gap-2 text-orange-600"
@@ -381,11 +426,19 @@ export default function EditPostPopup({
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={loading || (!caption.trim() && media.length === 0 && newMedia.length === 0)}
+                  disabled={
+                    loading ||
+                    (!caption.trim() &&
+                      media.length === 0 &&
+                      newMedia.length === 0)
+                  }
                   className={`px-6 py-2.5 rounded-xl transition-colors ${
-                    loading || (!caption.trim() && media.length === 0 && newMedia.length === 0)
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
+                    loading ||
+                    (!caption.trim() &&
+                      media.length === 0 &&
+                      newMedia.length === 0)
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-orange-500 text-white hover:bg-orange-600"
                   }`}
                 >
                   {loading ? (
@@ -394,7 +447,7 @@ export default function EditPostPopup({
                       Đang lưu...
                     </div>
                   ) : (
-                    'Lưu thay đổi'
+                    "Lưu thay đổi"
                   )}
                 </button>
               </div>
@@ -407,6 +460,17 @@ export default function EditPostPopup({
         isOpen={showRecipeModal}
         onClose={() => setShowRecipeModal(false)}
         onSelect={handleSelectRecipe}
+      />
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
       />
     </>
   );

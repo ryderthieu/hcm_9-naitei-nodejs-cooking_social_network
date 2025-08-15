@@ -112,3 +112,12 @@ export async function getFollowings(username: string) {
     throw error;
   }
 }
+
+export async function getUsers(): Promise<UserData[]> {
+  try {
+    const response = await get("/users");
+    return response.data.users;
+  } catch (error) {
+    throw error;
+  }
+}

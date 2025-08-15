@@ -65,6 +65,15 @@ type MultiplePostResponse = {
   };
 };
 
+type MultiplePostResponse = {
+  posts: PostResponse['post'][];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+};
+
 @Injectable()
 export class PostsService {
   constructor(private readonly prisma: PrismaService) { }
