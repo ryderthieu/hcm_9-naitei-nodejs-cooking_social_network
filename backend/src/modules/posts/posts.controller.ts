@@ -35,8 +35,11 @@ export class PostsController {
 
   @Get(':postId')
   @OptionalAuth()
-  async getById(@Param('postId', ParseIntPipe) postId: number) {
-    return this.postsService.getPostById(postId);
+  async getById(
+    @Param('postId', ParseIntPipe) postId: number,
+    @CurrentUser('user') user?: User,
+  ) {
+    return this.postsService.getPostById(postId, user);
   }
 
   @Get()

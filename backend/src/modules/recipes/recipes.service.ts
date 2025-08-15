@@ -354,6 +354,7 @@ export class RecipesService {
           categories: true,
           savedByUsers: true,
           author: true,
+          images: true,
         },
       }),
       this.prisma.recipe.count({ where }),

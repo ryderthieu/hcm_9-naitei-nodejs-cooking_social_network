@@ -8,6 +8,15 @@ import MainLayout from "../layouts/MainLayout";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import CreateRecipe from "../pages/recipe/CreateRecipe";
+import MessagePage from "../pages/main/Message/MessagePage";
+import CommunityRecipes from "../pages/recipe/CommunityRecipes";
+import TrendingBlog from "../pages/blog/TrendingBlog";
+import NewBlog from "../pages/blog/NewBlog";
+import HighlightedBlog from "../pages/blog/HighlightedBlog";
+import Blog1 from "../pages/blog/Blog1";
+import Blog2 from "../pages/blog/Blog2";
+import Blog3 from "../pages/blog/Blog3";
+import Blog4 from "../pages/blog/Blog4";
 
 export default function AppRouter() {
   return (
@@ -17,12 +26,85 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/" element={<Feed />} />
       <Route path="*" element={<NotFound />} />
-
+      <Route path="/messages" element={<MessagePage />} />
+      <Route path="/messages/:conversationId" element={<MessagePage />} />
       <Route
         path="/create-recipe"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <CreateRecipe />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/community-recipes"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <CommunityRecipes />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/trending-article"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <TrendingBlog />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/new-article"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <NewBlog />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/highlighted-article"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <HighlightedBlog />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/1"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <Blog1 />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/2"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <Blog2 />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/3"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <Blog3 />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/blog/4"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <Blog4 />
           </MainLayout>
         }
       />

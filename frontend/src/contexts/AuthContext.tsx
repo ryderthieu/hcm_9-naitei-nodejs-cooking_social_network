@@ -16,6 +16,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -23,10 +24,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
+      setLoading(true);
       const currentUser: User = await getCurrentUser();
       setUser(currentUser);
     } catch (error) {
+      console.log("User not authenticated, continuing as guest");
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,10 +52,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw error;
     }
   };
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         logout,
       }}

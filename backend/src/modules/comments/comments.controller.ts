@@ -18,6 +18,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from '@prisma/client';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { FilterCommentsDto } from './dto/filter-comments.dto';
+import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 
 @Controller('posts/:postId/comments')
 export class CommentsController {
@@ -65,28 +66,34 @@ export class CommentsController {
   }
 
   @Get(':commentId')
+  @OptionalAuth()
   async getCommentById(
     @Param('postId', ParseIntPipe) postId: number,
     @Param('commentId', ParseIntPipe) commentId: number,
+    @CurrentUser('user') user?: User,
   ) {
-    return this.commentsService.getCommentById(postId, commentId);
+    return this.commentsService.getCommentById(postId, commentId, user);
   }
 
   @Get()
+  @OptionalAuth()
   async getComments(
     @Param('postId', ParseIntPipe) postId: number,
     @Query() filter: FilterCommentsDto,
+    @CurrentUser('user') user?: User,
   ) {
-    return this.commentsService.getComments(postId, filter);
+    return this.commentsService.getComments(postId, filter, user);
   }
 
   @Get(':commentId/replies')
+  @OptionalAuth()
   async getReplies(
     @Param('postId', ParseIntPipe) postId: number,
     @Param('commentId', ParseIntPipe) commentId: number,
     @Query() filter: FilterCommentsDto,
+    @CurrentUser('user') user?: User,
   ) {
-    return this.commentsService.getReplies(postId, commentId, filter);
+    return this.commentsService.getReplies(postId, commentId, filter, user);
   }
 
   @Post(':commentId/like')
