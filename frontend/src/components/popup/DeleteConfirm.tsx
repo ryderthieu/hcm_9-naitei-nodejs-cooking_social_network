@@ -1,30 +1,43 @@
-import React from 'react';
-import { XMarkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { TrashIcon } from '@heroicons/react/24/solid';
+import React from "react";
+import {
+  XMarkIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/solid";
 
 interface DeleteConfirmProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  type: 'post' | 'comment';
+  type: "post" | "comment" | "message";
 }
 
 const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  type
+  type,
 }) => {
   if (!isOpen) return null;
 
   const getMessage = () => {
-    return type === 'post' 
-      ? 'Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.'
-      : 'Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.';
+    return type === "post"
+      ? "Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
+      : type === "comment"
+      ? "Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác."
+      : type === "message"
+      ? "Bạn có chắc chắn muốn xóa tin nhắn này? Hành động này không thể hoàn tác."
+      : "";
   };
 
   const getConfirmText = () => {
-    return type === 'post' ? 'Xóa bài viết' : 'Xóa bình luận';
+    return type === "post"
+      ? "Xóa bài viết"
+      : type === "comment"
+      ? "Xóa bình luận"
+      : type === "message"
+      ? "Xóa tin nhắn"
+      : "";
   };
 
   return (
@@ -47,9 +60,7 @@ const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
           </div>
 
           <div className="mb-8">
-            <p className="text-gray-600 leading-relaxed">
-              {getMessage()}
-            </p>
+            <p className="text-gray-600 leading-relaxed">{getMessage()}</p>
           </div>
 
           <div className="flex justify-end gap-3">
@@ -73,4 +84,4 @@ const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
   );
 };
 
-export default DeleteConfirm; 
+export default DeleteConfirm;
