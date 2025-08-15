@@ -12,7 +12,7 @@ export async function getConversations() {
 export async function getConversation(id: number) {
   try {
     const response = await get(`/conversations/${id}`);
-    return response.data;
+    return response.data.conversation;
   } catch (error) {
     throw error;
   }
