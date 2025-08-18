@@ -1,9 +1,7 @@
 import blog1 from "../../../assets/blog/blog1.png";
 import blog2 from "../../../assets/blog/blog2.png";
 import blog from "../../../assets/blog/blog3.png";
-
-const DEFAULT_AVATAR_URL =
-  "https://res.cloudinary.com/dfaq5hbmx/image/upload/v1749033098/general/bseoimm2ya0utf2duyyu.png";
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 
 const featuredRecipes = [
   {

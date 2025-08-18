@@ -28,7 +28,6 @@ export async function searchUsers(query: string) {
   }
 }
 
-
 export async function getUserById(userId: number) {
   try {
     const response = await get(`/users/${userId}`);
@@ -48,4 +47,12 @@ export async function unfollowUser(username: string) {
   return response.data;
 }
 
+export async function searchUsers(query: string) {
+  try {
+    const response = await get(`/users?name=${encodeURIComponent(query)}&limit=10`);
+    return response.data.users;
+  } catch (error) {
+    throw error;
+  }
+}
 
