@@ -9,6 +9,7 @@ import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import CreateRecipe from "../pages/recipe/CreateRecipe";
 import MessagePage from "../pages/main/Message/MessagePage";
+import CommunityRecipes from "../pages/recipe/CommunityRecipes";
 
 export default function AppRouter() {
   return (
@@ -25,6 +26,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <CreateRecipe />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/community-recipes"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <CommunityRecipes />
           </MainLayout>
         }
       />
