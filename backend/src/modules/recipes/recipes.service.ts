@@ -269,6 +269,7 @@ export class RecipesService {
   async getRecipes(query: QueryRecipesDto, currentUser?: User) {
     const {
       name,
+      username,
       mealType,
       cuisine,
       occasions,
@@ -338,6 +339,14 @@ export class RecipesService {
           some: {
             id: Number(savedBy),
           },
+        },
+      });
+    }
+
+    if (username) {
+      filters.push({
+        author: {
+          username: username,
         },
       });
     }

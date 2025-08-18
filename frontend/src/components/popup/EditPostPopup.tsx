@@ -251,7 +251,7 @@ export default function EditPostPopup({
                 </div>
                 <div className="ml-3">
                   <span className="font-semibold text-gray-800">
-                    {post.author.first_name} {post.author.last_name}
+                    {post.author.firstName} {post.author.lastName}
                   </span>
                   <p className="text-sm text-gray-500">Đăng công khai</p>
                 </div>

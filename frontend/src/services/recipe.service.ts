@@ -24,6 +24,15 @@ export const recipesService = {
     }
   },
 
+  async getRecipesByUser(username: string) {
+    try {
+      const response = await get("/recipes", { params: { username } });
+      return response.data.recipes;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   async getRecipeById(id: number) {
     try {
       const response = await get(`/recipes/${id}`);

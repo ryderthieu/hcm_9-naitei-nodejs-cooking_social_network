@@ -18,6 +18,10 @@ export class FilterPostsDto {
   keyword?: string;
 
   @IsOptional()
+  @IsString()
+  username?: string;
+
+  @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
   following?: boolean;

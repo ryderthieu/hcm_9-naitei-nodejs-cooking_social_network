@@ -17,12 +17,10 @@ export class UserResponseDto {
   birthday?: string | null;
   followers?: number;
   followings?: number;
-
-  @Exclude()
+  isFollowing?: boolean;
   recipesCount?: number;
-
-  @Exclude()
   postsCount?: number;
+  savedPostsCount?: number;
 
   @Exclude()
   password: string;
@@ -44,6 +42,9 @@ export class UserResponseDto {
 
     this.followers = partial._count?.following ?? 0; 
     this.followings = partial._count?.followers ?? 0; 
+    this.postsCount = partial._count?.authoredPosts ?? 0;
+    this.recipesCount = partial._count?.authoredRecipes ?? 0;
+    this.savedPostsCount = partial._count?.savedPosts ?? 0;
     this.avatar = partial.avatar || undefined;
     this.bio = partial.bio || undefined;
     this.gender = this.mapGender(partial.gender);

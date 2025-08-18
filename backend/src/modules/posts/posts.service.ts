@@ -28,8 +28,8 @@ type PostResponse = {
     id: number;
     author: {
       id: number;
-      first_name: string;
-      last_name: string;
+      firstName: string;
+      lastName: string;
       avatar: string | null;
       username: string;
     };
@@ -195,8 +195,8 @@ export class PostsService {
       id: post.id,
       author: {
         id: post.author.id,
-        first_name: post.author.firstName,
-        last_name: post.author.lastName,
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
         avatar: post.author.avatar,
         username: post.author.username,
       },
@@ -242,6 +242,7 @@ export class PostsService {
 
     const {
       keyword,
+      username,
       following = false,
       savedBy = false,
       sortBy = SortBy.NEWEST,
@@ -270,6 +271,12 @@ export class PostsService {
         select: { postId: true },
       });
       where.id = { in: saved.map((s) => s.postId) };
+    }
+
+    if (username) {
+      where.author = {
+        username: username,
+      };
     }
 
     const [total, posts] = await Promise.all([
