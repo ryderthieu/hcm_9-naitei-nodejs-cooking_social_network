@@ -8,6 +8,10 @@ export class QueryRecipesDto {
 
   @IsOptional()
   @IsString()
+  username?: string;
+
+  @IsOptional()
+  @IsString()
   mealType?: string;
 
   @IsOptional()

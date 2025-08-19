@@ -17,6 +17,8 @@ import Blog1 from "../pages/blog/Blog1";
 import Blog2 from "../pages/blog/Blog2";
 import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
+import ProfilePage from "../pages/main/Profile/ProfilePage";
+import DetailRecipe from "../pages/recipe/DetailRecipe";
 
 export default function AppRouter() {
   return (
@@ -28,6 +30,14 @@ export default function AppRouter() {
       <Route path="*" element={<NotFound />} />
       <Route path="/messages" element={<MessagePage />} />
       <Route path="/messages/:conversationId" element={<MessagePage />} />
+      <Route
+        path="/profile/:username"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <ProfilePage />
+          </MainLayout>
+        }
+      />
       <Route
         path="/create-recipe"
         element={
@@ -105,6 +115,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <Blog4 />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/detail-recipe"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <DetailRecipe />
           </MainLayout>
         }
       />
