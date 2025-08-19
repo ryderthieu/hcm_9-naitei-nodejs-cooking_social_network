@@ -6,8 +6,8 @@ import { followUser, unfollowUser } from "../../../services/user.service";
 interface UserHeaderProps {
   user: {
     id: number;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     avatar?: string | null;
     username?: string;
   };
@@ -92,9 +92,9 @@ export default function UserHeader({
           <div className="flex items-center gap-2">
             <div 
               className={`${classes.name} font-bold text-gray-900 hover:text-gray-700 cursor-pointer transition-colors`}
-              onClick={() => navigate(`/profile/${user.id}`)}
+              onClick={() => navigate(`/profile/${user.username}`)}
             >
-              {user.first_name} {user.last_name}
+              {user.firstName} {user.lastName}
             </div>
             {shouldShowFollowButton && (
               <button

@@ -1,8 +1,10 @@
 export interface CommentUserRef {
   id: number;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   avatar: string | null;
+  username?: string;
+  isFollowing?: boolean;
 }
 
 export interface CommentEntity {
