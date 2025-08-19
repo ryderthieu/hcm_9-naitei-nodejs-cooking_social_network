@@ -136,7 +136,28 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-sm text-gray-600 truncate flex-1">
-                      {conversation.lastMessage?.content || "Chưa có tin nhắn"}
+                      {conversation.lastMessage
+                        ? conversation.lastMessage.type === "TEXT"
+                          ? conversation.lastMessage.content
+                          : conversation.lastMessage.type === "MEDIA"
+                          ? (() => {
+                              try {
+                                const mediaContent = JSON.parse(
+                                  conversation.lastMessage.content
+                                );
+                                return mediaContent.kind === "IMAGE"
+                                  ? "Hình ảnh"
+                                  : "Video";
+                              } catch (e) {
+                                return "Media";
+                              }
+                            })()
+                          : conversation.lastMessage.type === "POST"
+                          ? "Bài viết"
+                          : conversation.lastMessage.type === "RECIPE"
+                          ? "Công thức"
+                          : "Tin nhắn"
+                        : "Chưa có tin nhắn"}
                     </p>
                     {conversation.unreadCount > 0 && (
                       <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 ml-2 flex-shrink-0 min-w-[20px] text-center">
