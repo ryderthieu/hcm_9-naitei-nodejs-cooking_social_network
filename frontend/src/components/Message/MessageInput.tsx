@@ -1,5 +1,6 @@
 import React from "react";
 import { Send, Smile, Image, X } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 import type { Member, Message } from "../../types/conversation.type";
 
 interface MessageInputProps {
@@ -13,6 +14,7 @@ interface MessageInputProps {
   onSend: () => void;
   onTyping?: (isTyping: boolean) => void;
   onCancelReply?: () => void;
+  onEmojiSelect?: (emoji: string) => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -26,7 +28,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSend,
   onTyping,
   onCancelReply,
+  onEmojiSelect,
 }) => {
+  const handleEmojiSelect = (emojiData: any) => {
+    if (onEmojiSelect) {
+      onEmojiSelect(emojiData.emoji);
+    }
+    setIsShowIconPicker(false);
+  };
   return (
     <>
       {replyingTo && (
@@ -84,11 +93,26 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               <Smile size={20} />
             </button>
             {isShowIconPicker && (
-              <div className="absolute z-50 top-[-450px] left-[-270px] h-[350px] w-auto">
-                <div className="bg-white border rounded-lg p-4 shadow-lg">
-                  Emoji Picker Placeholder
+              <>
+                <div
+                  className="fixed inset-0 bg-transparent z-40"
+                  onClick={() => setIsShowIconPicker(false)}
+                />
+                <div className="absolute z-50 bottom-full right-0 mb-2">
+                  <div className="bg-white border rounded-lg shadow-2xl">
+                    <EmojiPicker
+                      onEmojiClick={handleEmojiSelect}
+                      width={300}
+                      height={400}
+                      searchDisabled={false}
+                      skinTonesDisabled={true}
+                      previewConfig={{
+                        showPreview: false,
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
             <button
               className="text-gray-400 hover:text-blue-500 p-2 rounded-full transition-colors hover:bg-gray-100"

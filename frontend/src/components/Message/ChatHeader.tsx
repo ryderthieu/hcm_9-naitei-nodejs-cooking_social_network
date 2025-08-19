@@ -28,16 +28,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentUser,
   onlineUserIds = [],
 }) => {
-  const otherUser = conversation.members?.find(
-    (member) => member.id !== currentUser?.id
-  );
   const otherMembers = getOtherMembers(conversation, currentUser?.id);
 
   const isOnline = otherMembers.some((m) => onlineUserIds.includes(m.id));
 
   const displayName =
     conversation.name ||
-    (otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : "Người dùng");
+    (otherMembers.length === 1
+      ? `${otherMembers[0].firstName} ${otherMembers[0].lastName}`
+      : otherMembers.map((m) => m.firstName).join(", "));
 
   return (
     <div className="px-6 py-3 border-b border-gray-200 bg-white shadow-sm">

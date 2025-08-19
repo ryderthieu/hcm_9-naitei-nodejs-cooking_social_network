@@ -16,6 +16,20 @@ export interface Member {
   avatar: string | null;
 }
 
+export interface MessageReaction {
+  messageId: number;
+  userId: number;
+  emoji: string;
+  createdAt: string;
+  user: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+    avatar: string | null;
+  };
+}
+
 export interface Message {
   id: number;
   conversationId: number;
@@ -45,6 +59,7 @@ export interface Message {
       avatar: string | null;
     };
   }>;
+  reactions?: MessageReaction[];
 }
 
 export interface MessagesResponse {
