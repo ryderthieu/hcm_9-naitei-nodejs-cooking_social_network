@@ -1,11 +1,11 @@
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
-import sn1 from "../../assets/Blog/sn1.jpg";
-import sn2 from "../../assets/Blog/sn2.jpg";
-import sn3 from "../../assets/Blog/sn3.jpg";
-import sn4 from "../../assets/Blog/sn4.jpg";
-import sn5 from "../../assets/Blog/sn5.jpg";
-import sn6 from "../../assets/Blog/sn6.jpg";
-import rc from "../../assets/Blog/rc.jpg";
+import sn1 from "../../assets/blog/sn1.jpg";
+import sn2 from "../../assets/blog/sn2.jpg";
+import sn3 from "../../assets/blog/sn3.jpg";
+import sn4 from "../../assets/blog/sn4.jpg";
+import sn5 from "../../assets/blog/sn5.jpg";
+import sn6 from "../../assets/blog/sn6.jpg";
+import rc from "../../assets/blog/rc.jpg";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 const Blog3 = () => {

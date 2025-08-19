@@ -1,9 +1,9 @@
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
-import sl1 from "../../assets/Blog/sl1.jpg";
-import sl2 from "../../assets/Blog/sl2.jpg";
-import sl3 from "../../assets/Blog/sl3.jpg";
-import sl4 from "../../assets/Blog/sl4.jpg";
-import salad from "../../assets/Blog/salad.jpg";
+import sl1 from "../../assets/blog/sl1.jpg";
+import sl2 from "../../assets/blog/sl2.jpg";
+import sl3 from "../../assets/blog/sl3.jpg";
+import sl4 from "../../assets/blog/sl4.jpg";
+import salad from "../../assets/blog/salad.jpg";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 const Blog4 = () => {

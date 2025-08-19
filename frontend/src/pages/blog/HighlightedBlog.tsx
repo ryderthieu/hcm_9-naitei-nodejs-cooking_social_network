@@ -1,8 +1,8 @@
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
-import blog8 from "../../assets/Blog/blog8.png";
-import blog3 from "../../assets/Blog/blog3.png";
-import blog6 from "../../assets/Blog/blog6.png";
-import blog7 from "../../assets/Blog/blog7.png";
+import blog8 from "../../assets/blog/blog8.png";
+import blog3 from "../../assets/blog/blog3.png";
+import blog6 from "../../assets/blog/blog6.png";
+import blog7 from "../../assets/blog/blog7.png";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 const HighlightedBlog = () => {

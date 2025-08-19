@@ -1,6 +1,6 @@
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
-import blog1 from "../../assets/Blog/blog1.png";
-import blog2 from "../../assets/Blog/blog2.png";
+import blog1 from "../../assets/blog/blog1.png";
+import blog2 from "../../assets/blog/blog2.png";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 const NewBlog = () => {
