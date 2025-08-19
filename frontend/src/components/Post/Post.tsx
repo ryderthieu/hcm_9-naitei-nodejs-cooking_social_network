@@ -14,7 +14,6 @@ import {
   savePost,
   unsavePost,
 } from "../../services/post.service";
-
 import { useAuth } from "../../contexts/AuthContext";
 import UserHeader from "../common/user/UserHeader";
 import MediaGrid from "../common/media/MediaGrid";

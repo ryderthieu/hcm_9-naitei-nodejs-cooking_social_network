@@ -14,6 +14,8 @@ import {
   MessageReactions,
   ReactionSummary,
   SeenByAvatars,
+  InfoSidebar,
+  ConversationEditModal,
 } from "../../../components/Message";
 import type {
   Conversation,
@@ -27,10 +29,12 @@ import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 import {
   getConversations,
   getConversation,
+  updateConversation,
 } from "../../../services/conversation.service";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getMessages } from "../../../services/message.service";
 import { DeleteConfirm } from "../../../components/popup";
+import { uploadFiles } from "../../../services/upload.service";
 
 const convertUserToMember = (user: User): Member => ({
   id: user.id,
@@ -95,7 +99,13 @@ export default function MessagePage() {
   const prevScrollTopRef = useRef<number>(0);
   const lastScrollTopRef = useRef<number>(0);
   const isProgrammaticScrollRef = useRef<boolean>(false);
-
+  const [showEditConversationModal, setShowEditConversationModal] =
+    useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
   const { user, loading: isAuthLoading } = useAuth();
 
   const currentUserAsMember: Member | null = user
@@ -345,7 +355,7 @@ export default function MessagePage() {
         selectedConversationId &&
         message.conversationId.toString() === selectedConversationId
       ) {
-        if (message.senderUser.id !== user.id) {
+        if (message.senderUser.id !== user?.id) {
           setMessages((prev) => [...prev, message]);
 
           socket.emit("mark_as_seen", {
@@ -637,7 +647,7 @@ export default function MessagePage() {
         uploadSingleFile(file);
       });
     },
-    [selectedConversationId]
+    [selectedConversationId, replyingTo, user]
   );
 
   const handleDeleteMessage = (message: Message) => {
@@ -726,6 +736,7 @@ export default function MessagePage() {
   };
 
   const shouldShowSeenBy = (message: Message, isMyMessage: boolean) => {
+    if (message.type === "SYSTEM") return false;
     if (!message.seenBy || message.seenBy.length === 0) return false;
 
     if (!isMyMessage) {
@@ -735,6 +746,46 @@ export default function MessagePage() {
 
     const usersWhoLastSeenThis = getUsersWhoLastSeenThisMessage(message);
     return usersWhoLastSeenThis.length > 0;
+  };
+
+  const handleUpdateConversation = async (
+    conversationId: number,
+    data: {
+      name?: string;
+      avatar?: File;
+    }
+  ) => {
+    let success: boolean = false;
+    try {
+      if (!data.avatar && data.name === selectedConversation?.name) {
+        setError("Vui lòng nhập tên hoặc chọn ảnh");
+        return;
+      }
+      const avatarUpload = data.avatar
+        ? await uploadFiles([data.avatar])
+        : null;
+      const avatarUrl: string = avatarUpload ? avatarUpload[0].url : "";
+      avatarUrl
+        ? await updateConversation(conversationId, {
+            name: data.name,
+            avatar: avatarUrl,
+          })
+        : await updateConversation(conversationId, {
+            name: data.name,
+          });
+
+      socketRef.current?.emit("send_message", {
+        conversationId,
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã cập nhật cuộc trò chuyện.`,
+      });
+      setError(null);
+      success = true;
+    } catch (error) {
+      setError("Có lỗi xảy ra khi cập nhật cuộc trò chuyện");
+    } finally {
+      if (success) setShowEditConversationModal(false);
+    }
   };
 
   useEffect(() => {
@@ -776,7 +827,7 @@ export default function MessagePage() {
   }
 
   return (
-    <div className="fixed inset-0 flex bg-gray-100 h-screen">
+    <div className="fixed inset-0 flex bg-gray-100 h-screen items-center justify-center">
       <ConversationList
         conversations={conversations}
         filteredConversations={filteredConversations}
@@ -791,7 +842,7 @@ export default function MessagePage() {
       <div className="flex-1 flex h-full">
         <div
           className={`flex flex-col bg-white transition-all duration-300 ${
-            showInfoSidebar ? "w-[65%]" : "w-full"
+            showInfoSidebar ? "w-[70%]" : "w-full"
           }`}
         >
           {selectedConversationId && selectedConversation ? (
@@ -868,6 +919,20 @@ export default function MessagePage() {
                           (!previousMessage ||
                             getSenderAsMember(previousMessage).id !==
                               sender.id);
+
+                        if (message.type === "SYSTEM") {
+                          return (
+                            <div
+                              key={message.id}
+                              id={`message-${message.id}`}
+                              className="flex justify-center"
+                            >
+                              <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                {message.content}
+                              </div>
+                            </div>
+                          );
+                        }
 
                         return (
                           <div
@@ -1338,10 +1403,44 @@ export default function MessagePage() {
 
         <div
           className={`bg-white border-l border-gray-200 transition-all duration-300 relative ${
-            showInfoSidebar ? "w-[35%]" : "w-0 opacity-0 overflow-hidden"
+            showInfoSidebar ? "w-[30%]" : "w-0 opacity-0 overflow-hidden"
           }`}
-        ></div>
+        >
+          {selectedConversation && (
+            <InfoSidebar
+              conversation={selectedConversation}
+              onEditConversation={() => {
+                setShowEditConversationModal(true);
+              }}
+              onClickMembers={() => {
+                setShowMembersModal(true);
+              }}
+              onClickSearch={() => {
+                setShowSearchModal(true);
+              }}
+              onClickMedia={() => {
+                setShowMediaModal(true);
+              }}
+              onClickLink={() => {
+                setShowLinkModal(true);
+              }}
+              onClickLeave={() => {
+                setShowLeaveModal(true);
+              }}
+            />
+          )}
+        </div>
       </div>
+
+      <ConversationEditModal
+        conversation={selectedConversation || ({} as Conversation)}
+        isOpen={showEditConversationModal}
+        onClose={() => {
+          setShowEditConversationModal(false);
+        }}
+        onSave={handleUpdateConversation}
+        error={error}
+      />
 
       <DeleteConfirm
         isOpen={deleteModalOpen}
