@@ -113,22 +113,21 @@ export const RightSidebar: React.FC = () => {
         const usersPromises = getFollowers(user.username);
         const recipesPromises = recipeIds.map((id) => recipesService.getRecipeById(id));
 
-        const responses = await Promise.all([
+        const [followers, ...recipeResponses] = await Promise.all([
           usersPromises,
           ...recipesPromises,
         ]);
 
         const _isFollowing = await Promise.all(
-          responses[0].map((user) => isFollowing(user.username))
+          followers.map((user) => isFollowing(user.username))
         );
 
-        const suggestFollowUsers = responses[0]
+        const suggestFollowUsers = followers
           .filter((_,i) => !_isFollowing[i])
           .slice(0, 5);
 
-        const recipes = responses
-          .slice(1,)
-          .map((res: any) => res.recipe);
+        const recipes = recipeResponses
+          .map((res: { recipe: Recipe }) => res.recipe);
         
         setSuggestFollow(suggestFollowUsers);
         setHotDishs(recipes);
