@@ -15,7 +15,10 @@ import {
   savePost,
   unsavePost,
 } from "../../services/post.service";
-import { getConversations, createConversation } from "../../services/conversation.service";
+import {
+  getConversations,
+  createConversation,
+} from "../../services/conversation.service";
 import Comments from "./Comments";
 import { useAuth } from "../../contexts/AuthContext";
 import UserHeader from "../common/user/UserHeader";
@@ -31,13 +34,19 @@ interface PostProps {
   className?: string;
 }
 
-export default function Post({ post, showActions = true, className = "" }: PostProps) {
+export default function Post({
+  post,
+  showActions = true,
+  className = "",
+}: PostProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   if (!post || !post.id || !post.author) {
     return (
-      <article className={`relative w-full bg-yellow-50 rounded-xl shadow-sm border border-yellow-200 overflow-hidden ${className}`}>
+      <article
+        className={`relative w-full bg-yellow-50 rounded-xl shadow-sm border border-yellow-200 overflow-hidden ${className}`}
+      >
         <div className="px-4 py-6 text-center text-gray-500 bg-gray-50">
           <p className="text-sm">Dữ liệu bài viết không hợp lệ</p>
         </div>
@@ -61,7 +70,9 @@ export default function Post({ post, showActions = true, className = "" }: PostP
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const feedDropdown = useDropdown();
   const sharePopup = useDropdown();
-  const [followingAuthor, setFollowingAuthor] = useState<boolean>(Boolean(post.following_author));
+  const [followingAuthor, setFollowingAuthor] = useState<boolean>(
+    Boolean(post.following_author)
+  );
 
   useEffect(() => {
     setFollowingAuthor(Boolean(post.following_author));
@@ -122,16 +133,19 @@ export default function Post({ post, showActions = true, className = "" }: PostP
         const conversation = await createConversation({ members: [userId] });
         conversationId = conversation.conversation.id;
       } catch (error: any) {
-        if (error.message?.includes('already exists')) {
+        if (error.message?.includes("already exists")) {
           const conversationsResponse = await getConversations();
-          const conversations = Array.isArray(conversationsResponse) ? conversationsResponse : conversationsResponse.conversations || [];
+          const conversations = Array.isArray(conversationsResponse)
+            ? conversationsResponse
+            : conversationsResponse.conversations || [];
 
-          const existingConversation = conversations.find((conv: any) =>
-            conv.members?.length === 2 &&
-            conv.members?.some((member: any) => member.id === userId)
+          const existingConversation = conversations.find(
+            (conv: any) =>
+              conv.members?.length === 2 &&
+              conv.members?.some((member: any) => member.id === userId)
           );
           if (!existingConversation) {
-            throw new Error('Không thể tìm conversation hiện có');
+            throw new Error("Không thể tìm conversation hiện có");
           }
           conversationId = existingConversation.id;
         } else {
@@ -139,28 +153,31 @@ export default function Post({ post, showActions = true, className = "" }: PostP
         }
       }
 
-      const postUrl = `${window.location.origin}/posts/${data.id}`;
-      const messageContent = `Xem bài viết này: ${data.caption ? data.caption.substring(0, 100) + '...' : 'Bài viết mới'} ${postUrl}`;
+      const messageContent = JSON.stringify({
+        id: data.id,
+        caption: data.caption,
+        slug: data.slug || null,
+      });
 
       const token = getAccessToken();
       if (!token) {
-        throw new Error('Không có token xác thực');
+        throw new Error("Không có token xác thực");
       }
 
-      const socket = io('http://localhost:3000/messages', {
-        auth: { token }
+      const socket = io("http://localhost:3000/messages", {
+        auth: { token },
       });
 
       await new Promise((resolve, reject) => {
-        socket.on('connect', () => {
+        socket.on("connect", () => {
           const payload = {
             conversationId,
             content: messageContent,
-            type: 'POST' as const,
+            type: "POST" as const,
             replyOf: null as number | null,
           };
 
-          socket.emit('send_message', payload, (response: any) => {
+          socket.emit("send_message", payload, (response: any) => {
             if (response && response.error) {
               reject(new Error(response.error));
             } else {
@@ -168,14 +185,6 @@ export default function Post({ post, showActions = true, className = "" }: PostP
             }
           });
         });
-
-        socket.on('connect_error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          reject(new Error('Kết nối timeout'));
-        }, 10000);
       });
 
       socket.disconnect();
@@ -199,16 +208,29 @@ export default function Post({ post, showActions = true, className = "" }: PostP
       sharePopup.close();
 
       const shareUrl = `${window.location.origin}/posts/${data.id}`;
-      const shareText = `Xem bài viết này: ${data.caption.substring(0, 100)}...`;
+      const shareText = `Xem bài viết này: ${data.caption.substring(
+        0,
+        100
+      )}...`;
 
       switch (platform) {
-        case 'facebook':
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+        case "facebook":
+          window.open(
+            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+              shareUrl
+            )}`,
+            "_blank"
+          );
           break;
-        case 'twitter':
-          window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+        case "twitter":
+          window.open(
+            `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+              shareUrl
+            )}&text=${encodeURIComponent(shareText)}`,
+            "_blank"
+          );
           break;
-        case 'copy':
+        case "copy":
           navigator.clipboard.writeText(shareUrl);
           alert("Đã sao chép link bài viết!");
           break;
@@ -226,7 +248,10 @@ export default function Post({ post, showActions = true, className = "" }: PostP
     try {
       if (saved) {
         await unsavePost(data.id);
-        setData({ ...data, saves_count: Math.max(0, (data.saves_count || 0) - 1) });
+        setData({
+          ...data,
+          saves_count: Math.max(0, (data.saves_count || 0) - 1),
+        });
         setSaved(false);
       } else {
         await savePost(data.id);
@@ -242,7 +267,9 @@ export default function Post({ post, showActions = true, className = "" }: PostP
 
   if (showDeleteMessage) {
     return (
-      <article className={`relative w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}>
+      <article
+        className={`relative w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}
+      >
         <div className="px-4 py-6 text-center text-green-600 bg-green-50">
           <TrashIcon className="w-8 h-8 mx-auto mb-2 text-green-500" />
           <p className="text-sm font-medium">Bài viết đã được xóa thành công</p>
@@ -257,37 +284,59 @@ export default function Post({ post, showActions = true, className = "" }: PostP
 
   const menuItems = [
     {
-      id: 'edit',
-      label: 'Chỉnh sửa',
+      id: "edit",
+      label: "Chỉnh sửa",
       icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
         </svg>
       ),
       onClick: () => {
         setShowEditPopup(true);
         feedDropdown.close();
-      }
+      },
     },
     {
-      id: 'delete',
-      label: 'Xóa bài',
-      variant: 'danger' as const,
+      id: "delete",
+      label: "Xóa bài",
+      variant: "danger" as const,
       icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
         </svg>
       ),
       onClick: () => {
         openDeleteConfirm();
         feedDropdown.close();
-      }
-    }
+      },
+    },
   ];
 
   return (
     <>
-      <article className={`relative w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}>
+      <article
+        className={`relative w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}
+      >
         <div className="flex items-center justify-between p-4">
           <UserHeader
             user={data.author}
@@ -310,7 +359,9 @@ export default function Post({ post, showActions = true, className = "" }: PostP
               <p className="text-gray-900 mb-2">
                 <span
                   className="text-yellow-500 font-medium hover:underline cursor-pointer"
-                  onClick={() => navigate(`/recipe/${data.recipe.slug || data.recipe.id}`)}
+                  onClick={() =>
+                    navigate(`/recipe/${data.recipe.slug || data.recipe.id}`)
+                  }
                 >
                   @{data.recipe.title}
                 </span>
@@ -359,8 +410,18 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                 onClick={() => setShowComments(false)}
                 className="absolute top-4 left-4 bg-black bg-opacity-50 text-white hover:text-gray-300 transition-colors z-10 rounded-full p-2"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -374,38 +435,60 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                   showFollowButton={true}
                   isFollowing={followingAuthor}
                   currentUserId={user?.id}
-                  onFollowChange={(isFollowing) => setFollowingAuthor(isFollowing)}
+                  onFollowChange={(isFollowing) =>
+                    setFollowingAuthor(isFollowing)
+                  }
                 />
 
                 {user && user.id === data.author.id && (
                   <ThreeDotsMenu
                     items={[
                       {
-                        id: 'edit',
-                        label: 'Chỉnh sửa',
+                        id: "edit",
+                        label: "Chỉnh sửa",
                         icon: (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
                           </svg>
                         ),
                         onClick: () => {
                           setEditingInModal(true);
                           setCaptionDraft(data.caption || "");
-                        }
+                        },
                       },
                       {
-                        id: 'delete',
-                        label: 'Xóa bài',
-                        variant: 'danger',
+                        id: "delete",
+                        label: "Xóa bài",
+                        variant: "danger",
                         icon: (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
                           </svg>
                         ),
                         onClick: () => {
                           openDeleteConfirm();
-                        }
-                      }
+                        },
+                      },
                     ]}
                   />
                 )}
@@ -417,7 +500,11 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                     <p className="text-gray-900 mb-2">
                       <span
                         className="text-yellow-500 font-medium hover:underline cursor-pointer"
-                        onClick={() => navigate(`/recipe/${data.recipe.slug || data.recipe.id}`)}
+                        onClick={() =>
+                          navigate(
+                            `/recipe/${data.recipe.slug || data.recipe.id}`
+                          )
+                        }
                       >
                         @{data.recipe.title}
                       </span>
@@ -454,12 +541,15 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                             onClick={async () => {
                               try {
                                 await updatePost(data.id, {
-                                  caption: captionDraft
+                                  caption: captionDraft,
                                 });
                                 setData({ ...data, caption: captionDraft });
                                 setEditingInModal(false);
                               } catch (e) {
-                                showErrorAlert(e, "Không thể cập nhật bài viết. Vui lòng thử lại!");
+                                showErrorAlert(
+                                  e,
+                                  "Không thể cập nhật bài viết. Vui lòng thử lại!"
+                                );
                               }
                             }}
                             className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -472,7 +562,9 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                         <div className="absolute top-full left-0 mt-2 z-10">
                           <EmojiPicker
                             onEmojiClick={(emojiObject) => {
-                              setCaptionDraft(prev => prev + emojiObject.emoji);
+                              setCaptionDraft(
+                                (prev) => prev + emojiObject.emoji
+                              );
                               setShowEmojiPicker(false);
                             }}
                             width={300}
@@ -497,7 +589,7 @@ export default function Post({ post, showActions = true, className = "" }: PostP
                   isLiked={liked}
                   isSaved={saved}
                   onLikeToggle={handleToggleLike}
-                  onCommentClick={() => { }}
+                  onCommentClick={() => {}}
                   onShareClick={handleShareClick}
                   onSaveClick={handleToggleSave}
                 />

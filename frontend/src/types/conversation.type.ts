@@ -30,13 +30,15 @@ export interface MessageReaction {
   };
 }
 
+export type MessageType = "TEXT" | "MEDIA" | "POST" | "RECIPE";
+
 export interface Message {
   id: number;
   conversationId: number;
   sender: number;
   content: string;
   replyOf: number | null;
-  type: string;
+  type: MessageType;
   createdAt: string;
   updatedAt: string;
   senderUser: {
