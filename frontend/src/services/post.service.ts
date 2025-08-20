@@ -25,7 +25,7 @@ export async function fetchPosts(params?: FilterPostsDto) {
   return res.data;
 }
 
-export async function fetchPost(postId: number) {
+export async function getPostById(postId: number) {
   const res = await get<PostResponse>(`/posts/${postId}`);
   return res.data;
 }

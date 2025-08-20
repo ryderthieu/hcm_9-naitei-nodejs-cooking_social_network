@@ -18,6 +18,7 @@ import Blog2 from "../pages/blog/Blog2";
 import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
+import PostDetail from "../pages/main/PostDetail/PostDetail";
 
 export default function AppRouter() {
   return (
@@ -41,6 +42,14 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <ProfilePage />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/post/:id"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <PostDetail />
           </MainLayout>
         }
       />
