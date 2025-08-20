@@ -1,6 +1,7 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import { MessageCircle } from "lucide-react";
+import ProfileStats from "./ProfileStats";
+import { FollowersPopup } from "../../popup";
 
 interface ProfileHeaderProps {
   user: any;
@@ -9,7 +10,7 @@ interface ProfileHeaderProps {
   isFollowing: boolean;
   activeTab?: string;
   onToggleFollow: () => void;
-  onEditProfile: (formData: any) => void;
+  onEditProfile: () => void;
   onMessage: (username: string) => void;
   onTabChange?: (tab: string) => void;
 }
@@ -25,7 +26,7 @@ export default function ProfileHeader({
   onMessage,
   onTabChange,
 }: ProfileHeaderProps) {
-  const navigate = useNavigate();
+  const [showFollowers, setShowFollowers] = useState<null | "followers" | "following">(null);
 
   const handleStatClick = (type: string) => {
     if (type === "posts" && onTabChange) {
@@ -33,15 +34,18 @@ export default function ProfileHeader({
     } else if (type === "recipes" && onTabChange) {
       onTabChange("recipes");
     } else if (type === "followers") {
+      setShowFollowers("followers");
     } else if (type === "following") {
+      setShowFollowers("following");
     }
   };
 
   return (
+    <>
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="h-32 bg-gradient-to-r from-amber-100 to-yellow-100 relative">
+      <div className="h-48 bg-gradient-to-r from-amber-100 to-yellow-100 relative">
         <div className="absolute -bottom-16 left-8">
-          <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden bg-gray-200">
+          <div className="w-36 h-36 rounded-full border-4 border-white overflow-hidden bg-gray-200">
             <img
               src={user?.avatar || "/src/assets/avatar-default.svg"}
               alt={user?.firstName || "User"}
@@ -51,55 +55,28 @@ export default function ProfileHeader({
         </div>
       </div>
 
-      <div className="pt-20 pb-6 px-8">
+      <div className="pt-24 pb-8 px-10">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="mb-2">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900">
                 {user?.firstName} {user?.lastName}
               </h1>
               {user?.bio && (
-                <p className="text-lg text-amber-600 font-medium">{user.bio}</p>
+                <p className="text-base text-amber-600 font-medium">{user.bio}</p>
               )}
-            </div>
-
-            <div className="flex items-center space-x-8">
-              <div
-                className="text-center cursor-pointer hover:text-amber-600 transition-colors"
-                onClick={() => handleStatClick("posts")}
-              >
-                <div className="text-xl font-bold text-gray-900">
-                  {stats?.posts?.count || 0}
-                </div>
-                <div className="text-sm text-gray-600">Bài đăng</div>
-              </div>
-              <div
-                className="text-center cursor-pointer hover:text-amber-600 transition-colors"
-                onClick={() => handleStatClick("recipes")}
-              >
-                <div className="text-xl font-bold text-gray-900">
-                  {stats?.recipes?.count || 0}
-                </div>
-                <div className="text-sm text-gray-600">Công thức</div>
-              </div>
-              <div
-                className="text-center cursor-pointer hover:text-amber-600 transition-colors"
-                onClick={() => handleStatClick("followers")}
-              >
-                <div className="text-xl font-bold text-gray-900">
-                  {stats?.followers?.count || 0}
-                </div>
-                <div className="text-sm text-gray-600">Người theo dõi</div>
-              </div>
-              <div
-                className="text-center cursor-pointer hover:text-amber-600 transition-colors"
-                onClick={() => handleStatClick("following")}
-              >
-                <div className="text-xl font-bold text-gray-900">
-                  {stats?.following?.count || 0}
-                </div>
-                <div className="text-sm text-gray-600">Đang theo dõi</div>
-              </div>
+              {user?.createdAt && (
+                <span className="mt-3 text-sm text-gray-500 flex items-center gap-1">
+                  <span>📅 Tham gia</span>
+                  {(() => {
+                    const date = new Date(user.createdAt);
+                    if (!isNaN(date.getTime())) {
+                      return `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+                    }
+                    return String(user.createdAt);
+                  })()}
+                </span>
+              )}
             </div>
           </div>
 
@@ -127,7 +104,7 @@ export default function ProfileHeader({
             )}
             {isOwnProfile && (
               <button
-                onClick={() => onEditProfile(user)}
+                onClick={onEditProfile}
                 className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
               >
                 Chỉnh sửa hồ sơ
@@ -135,7 +112,17 @@ export default function ProfileHeader({
             )}
           </div>
         </div>
+        <div className="mt-2">
+          <ProfileStats stats={stats} username={user?.username} />
+        </div>
       </div>
     </div>
+    <FollowersPopup
+      isOpen={Boolean(showFollowers)}
+      onClose={() => setShowFollowers(null)}
+      username={user?.username as string}
+      type={showFollowers === "followers" ? "followers" : "following"}
+    />
+    </>
   );
 }

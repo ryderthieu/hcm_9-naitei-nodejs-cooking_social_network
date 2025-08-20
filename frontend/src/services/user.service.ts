@@ -59,7 +59,7 @@ export async function toggleFollow(username: string) {
 
 export async function updateUserProfile(formData: UserProfile) {
   try {
-    const response = await put("/users/profile", formData);
+    const response = await put("/users/me", formData);
     return response.data.user;
   } catch (error) {
     throw error;
@@ -99,6 +99,15 @@ export async function isFollowing(username: string): Promise<boolean> {
   try {
     const response = await get(`/users/${username}/follow-status`);
     return response.data.isFollowing;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getFollowings(username: string) {
+  try {
+    const response = await get(`/users/${username}/followings`);
+    return response.data.users;
   } catch (error) {
     throw error;
   }
