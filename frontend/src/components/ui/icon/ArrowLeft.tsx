@@ -1,4 +1,4 @@
-import arrowLeftImage from "../../../assets/Home/Polygon 2.png";
+import arrowLeftImage from "../../../assets/home/Polygon 2.png";
 import React, { type ImgHTMLAttributes } from "react";
 
 interface ArrowLeftProps extends ImgHTMLAttributes<HTMLImageElement> {
