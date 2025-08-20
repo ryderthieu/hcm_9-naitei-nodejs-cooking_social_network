@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getUserByUsername,
   getUserStats,
@@ -14,12 +14,14 @@ import ProfileSidebar from "../../../components/sections/Profile/ProfileSidebar"
 import PostsTab from "../../../components/sections/Profile/PostsTab";
 import RecipesTab from "../../../components/sections/Profile/RecipesTab";
 import SavedContent from "../../../components/sections/Profile/SavedContent";
-import EditProfileModal from "../../../components/sections/Profile/EditProfileModal";
+import { EditProfilePopup } from "../../../components/popup";
 import type { UserData, UserStats, UserProfile } from "../../../types/user.type";
+import { getConversations, createConversation } from "../../../services/conversation.service";
 
 export default function ProfilePage() {
   const { username } = useParams();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("posts");
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -118,10 +120,34 @@ export default function ProfilePage() {
     }
   };
 
-  const handleMessage = (targetUsername: string) => {
+  const handleMessage = async (targetUsername: string) => {
     if (!currentUser) {
       showErrorAlert(null, "Vui lòng đăng nhập để thực hiện thao tác này");
       return;
+    }
+    try {
+      const conversationsResponse = await getConversations();
+      const conversations = conversationsResponse?.conversations || conversationsResponse || [];
+      const existing = conversations.find((c: any) => Array.isArray(c.members) && c.members.some((m: any) => m.username === targetUsername));
+      if (existing?.id) {
+        navigate(`/messages/${existing.id}`);
+        return;
+      }
+
+      const target = await getUserByUsername(targetUsername);
+      if (!target?.id) {
+        navigate("/messages");
+        return;
+      }
+      const payload = { members: [target.id], name: `${target.firstName} ${target.lastName}`, avatar: target.avatar };
+      const created = await createConversation(payload);
+      if (created?.conversation?.id) {
+        navigate(`/messages/${created.conversation.id}`);
+      } else {
+        navigate("/messages");
+      }
+    } catch (e) {
+      navigate("/messages");
     }
   };
 
@@ -183,50 +209,47 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <ProfileHeader
-          user={userData}
-          stats={userStats}
-          isOwnProfile={isOwnProfile}
-          isFollowing={isFollowing}
-          activeTab={activeTab}
-          onToggleFollow={handleToggleFollow}
-          onEditProfile={() => setIsEditModalOpen(true)}
-          onMessage={handleMessage}
-          onTabChange={setActiveTab}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3">
-            <div className="lg:sticky lg:top-24">
-              <ProfileSidebar
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                userData={userData}
-                userStats={userStats}
-                isOwnProfile={isOwnProfile}
-                user={userData}
-                stats={userStats}
-                isFollowing={isFollowing}
-                onToggleFollow={handleToggleFollow}
-                onEditProfile={() => setIsEditModalOpen(true)}
-              />
-            </div>
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-3 sticky top-[88px] h-fit max-h-[calc(100vh-88px)] self-start">
+            <ProfileSidebar
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              userData={userData}
+              userStats={userStats}
+              isOwnProfile={isOwnProfile}
+              user={userData}
+              stats={userStats}
+              isFollowing={isFollowing}
+              onToggleFollow={handleToggleFollow}
+              onEditProfile={() => setIsEditModalOpen(true)}
+            />
           </div>
-
-          <div className="lg:col-span-6">{renderActiveTab()}</div>
-
+          <div className="lg:col-span-6 space-y-6">
+            <ProfileHeader
+              user={userData}
+              stats={userStats}
+              isOwnProfile={isOwnProfile}
+              isFollowing={isFollowing}
+              activeTab={activeTab}
+              onToggleFollow={handleToggleFollow}
+              onEditProfile={() => setIsEditModalOpen(true)}
+              onMessage={handleMessage}
+              onTabChange={setActiveTab}
+            />
+            {renderActiveTab()}
+          </div>
           <div className="hidden lg:block lg:col-span-3">
             <div className="h-full rounded-2xl"></div>
           </div>
         </div>
       </div>
 
-      <EditProfileModal
+      <EditProfilePopup
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSave={handleEditProfile}
-        user={userData as Partial<UserProfile>}
+        initialUser={userData as Partial<UserProfile>}
+        onUpdated={(updated) => setUserData(updated)}
       />
     </div>
   );

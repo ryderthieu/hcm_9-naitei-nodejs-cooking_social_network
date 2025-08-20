@@ -1,5 +1,5 @@
 import { timeAgoVi, showErrorAlert } from "../../../utils/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { followUser, unfollowUser } from "../../../services/user.service";
 
@@ -15,11 +15,14 @@ interface UserHeaderProps {
   size?: "sm" | "md" | "lg";
   showTimestamp?: boolean;
   showName?: boolean;
+  showUsername?: boolean;
   className?: string;
   showFollowButton?: boolean;
   isFollowing?: boolean;
   currentUserId?: number;
   onFollowChange?: (isFollowing: boolean) => void;
+  hideAvatar?: boolean;
+  onNameClick?: () => void;
 }
 
 export default function UserHeader({
@@ -28,13 +31,16 @@ export default function UserHeader({
   size = "md",
   showTimestamp = true,
   showName = true,
+  showUsername = false,
   className = "",
   showFollowButton = false,
   isFollowing = false,
   currentUserId,
-  onFollowChange
+  onFollowChange,
+  hideAvatar = false
 }: UserHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [following, setFollowing] = useState(isFollowing);
   const [loading, setLoading] = useState(false);
   const sizeClasses = {
@@ -82,17 +88,26 @@ export default function UserHeader({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <img
-        src={user.avatar || "/src/assets/avatar-default.svg"}
-        alt="avatar"
-        className={`${classes.avatar} rounded-full object-cover border border-gray-200`}
-      />
+      {!hideAvatar && (
+        <img
+          src={user.avatar || "/src/assets/avatar-default.svg"}
+          alt="avatar"
+          className={`${classes.avatar} rounded-full object-cover border border-gray-200`}
+        />
+      )}
       {showName && (
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <div 
               className={`${classes.name} font-bold text-gray-900 hover:text-gray-700 cursor-pointer transition-colors`}
-              onClick={() => navigate(`/profile/${user.username}`)}
+              onClick={() => {
+                const target = `/profile/${user.username}`;
+                if (location.pathname === target) {
+                  window.location.assign(target);
+                } else {
+                  navigate(target);
+                }
+              }}
             >
               {user.firstName} {user.lastName}
             </div>
@@ -110,6 +125,9 @@ export default function UserHeader({
               </button>
             )}
           </div>
+          {showUsername && user.username && (
+            <div className="text-sm text-gray-500">@{user.username}</div>
+          )}
           {showTimestamp && timestamp && (
             <div className={classes.timestamp}>
               {timeAgoVi(timestamp.toString())}

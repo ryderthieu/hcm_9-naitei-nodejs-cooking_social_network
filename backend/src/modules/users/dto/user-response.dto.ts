@@ -21,12 +21,10 @@ export class UserResponseDto {
   recipesCount?: number;
   postsCount?: number;
   savedPostsCount?: number;
+  createdAt: Date;
 
   @Exclude()
   password: string;
-
-  @Exclude()
-  createdAt: Date;
 
   @Exclude()
   updatedAt: Date;
