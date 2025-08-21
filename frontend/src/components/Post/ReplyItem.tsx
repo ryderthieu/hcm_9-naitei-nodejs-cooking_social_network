@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import UserHeader from "../common/user/UserHeader";
 import CommentInput from "../common/forms/CommentInput";
 import { timeAgoVi, showErrorAlert } from "../../utils/utils";
 import HeartIcon from "./icons/HeartIcon";
@@ -8,9 +10,10 @@ import EmojiPicker from "emoji-picker-react";
 
 interface ReplyUser {
   id: number;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   avatar?: string | null;
+  username?: string;
 }
 
 interface ReplyItemProps {
@@ -60,6 +63,7 @@ export default function ReplyItem({
   onDeleteReply,
   currentUser
 }: ReplyItemProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -127,7 +131,7 @@ export default function ReplyItem({
 
   const handleReplyClick = () => {
     setShowReplyInput(true);
-    setReplyText(`@${user.first_name} ${user.last_name || ""} `);
+    setReplyText(`@${user.firstName} ${user.lastName || ""} `);
   };
 
   const handleNestedReply = async (replyId: number, replyText: string) => {
@@ -182,11 +186,18 @@ export default function ReplyItem({
           <div className="bg-white rounded-lg p-3 text-sm relative">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                                 <div className="mb-1">
-                   <span className="font-medium text-gray-900">
-                     {user.first_name} {user.last_name}
-                   </span>
-                 </div>
+                <div className="mb-1">
+                  <UserHeader
+                    user={{ id: user.id, firstName: user.firstName, lastName: user.lastName, avatar: user.avatar, username: user.username }}
+                    size="md"
+                    showTimestamp={false}
+                    showUsername={false}
+                    showFollowButton={false}
+                    hideAvatar={true}
+                    onNameClick={() => navigate(`/profile/${user.username}`)}
+                    className="!gap-0"
+                  />
+                </div>
                 {isEditing ? (
                   <div className="mt-1">
                     <div className="relative">

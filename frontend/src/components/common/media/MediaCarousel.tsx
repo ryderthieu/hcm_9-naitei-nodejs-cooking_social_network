@@ -26,8 +26,6 @@ export default function MediaCarousel({ items, className = "" }: MediaCarouselPr
   };
 
   const currentItem = items[index];
-  const nextItem = items[(index + 1) % total];
-  const showDouble = total >= 2 && currentItem.type === "IMAGE" && nextItem.type === "IMAGE";
 
   if (!currentItem) return null;
 
@@ -37,39 +35,22 @@ export default function MediaCarousel({ items, className = "" }: MediaCarouselPr
         <>
           <button
             aria-label="Previous"
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 z-10 flex items-center justify-center transition-colors"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 z-10 flex items-center justify-center transition-colors"
             onClick={() => go(-1)}
           >
-            <ChevronLeftIcon className="w-4 h-4" />
+            <ChevronLeftIcon className="w-5 h-5" />
           </button>
           <button
             aria-label="Next"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 z-10 flex items-center justify-center transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 z-10 flex items-center justify-center transition-colors"
             onClick={() => go(1)}
           >
-            <ChevronRightIcon className="w-4 h-4" />
+            <ChevronRightIcon className="w-5 h-5" />
           </button>
         </>
       )}
 
-      {showDouble ? (
-        <div className="grid grid-cols-2 gap-1 w-full h-full">
-          <div className="w-full h-full flex items-center justify-center">
-            <img
-              className="w-full h-full object-contain"
-              src={currentItem.url}
-              alt="media 1"
-            />
-          </div>
-          <div className="w-full h-full flex items-center justify-center">
-            <img
-              className="w-full h-full object-contain"
-              src={nextItem.url}
-              alt="media 2"
-            />
-          </div>
-        </div>
-      ) : currentItem.type === "VIDEO" ? (
+      {currentItem.type === "VIDEO" ? (
         <div className="w-full h-full relative flex items-center justify-center">
           <video
             className="w-full h-full object-contain"

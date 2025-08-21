@@ -24,6 +24,15 @@ export const recipesService = {
     }
   },
 
+  async getRecipesByUser(username: string) {
+    try {
+      const response = await get("/recipes", { params: { username } });
+      return response.data.recipes;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   async getRecipeById(id: number) {
     try {
       const response = await get(`/recipes/${id}`);
@@ -63,7 +72,7 @@ export const recipesService = {
   async createRating(recipeId: number, createRatingDto: CreateRatingDto) {
     try {
       const response = await post(
-        `/recipes/${recipeId}/ratings`,
+        `/recipes/${recipeId}/rating`,
         createRatingDto
       );
       return response.data;
@@ -79,7 +88,7 @@ export const recipesService = {
   ) {
     try {
       const response = await put(
-        `/recipes/${recipeId}/ratings/${ratingId}`,
+        `/recipes/${recipeId}/rating/${ratingId}`,
         updateRatingDto
       );
       return response.data;
@@ -88,9 +97,9 @@ export const recipesService = {
     }
   },
 
-  async deleteRating(ratingId: number) {
+  async deleteRating(ratingId: number, recipeId: number) {
     try {
-      const response = await del(`/ratings/${ratingId}`);
+      const response = await del(`/recipes/${recipeId}/rating/${ratingId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -100,10 +109,19 @@ export const recipesService = {
   async getRatings(recipeId: number, query?: QueryRatingDto) {
     try {
       const response = await get(
-        `/recipes/${recipeId}/ratings`,
+        `/recipes/${recipeId}/rating`,
         query ? { params: query } : undefined
       );
       return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async findUserReviewForRecipe(recipeId: number) {
+    try {
+      const response = await get(`/recipes/${recipeId}/rating/me`);
+      return response.data; // có thể null nếu chưa có review
     } catch (error) {
       throw error;
     }

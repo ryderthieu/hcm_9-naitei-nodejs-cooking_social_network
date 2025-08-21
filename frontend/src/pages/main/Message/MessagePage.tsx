@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { Info, MessageSquareText } from "lucide-react";
+import { Info, MessageSquareText, Reply, Trash2 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { API_CONSTANTS } from "../../../constants/constants";
 
@@ -10,6 +10,10 @@ import {
   MessageInput,
   EmptyState,
   NewMessageNotification,
+  Tooltip,
+  MessageReactions,
+  ReactionSummary,
+  SeenByAvatars,
 } from "../../../components/Message";
 import type {
   Conversation,
@@ -19,9 +23,13 @@ import type {
 } from "../../../types/conversation.type";
 import type { User } from "../../../types/auth.type";
 import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
-import { getConversations } from "../../../services/conversation.service";
+import {
+  getConversations,
+  getConversation,
+} from "../../../services/conversation.service";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getMessages } from "../../../services/message.service";
+import { DeleteConfirm } from "../../../components/popup";
 
 const convertUserToMember = (user: User): Member => ({
   id: user.id,
@@ -46,6 +54,9 @@ export default function MessagePage() {
 
   const socketRef = useRef<Socket | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const conversationUpdateTimeoutRef = useRef<
+    Record<number, ReturnType<typeof setTimeout>>
+  >({});
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +70,22 @@ export default function MessagePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showInfoSidebar, setShowInfoSidebar] = useState(false);
   const [isShowIconPicker, setIsShowIconPicker] = useState(false);
-  const [replyingTo, _setReplyingTo] = useState<Message | null>(null);
-  const [newMessage, _setNewMessage] = useState("");
-  const [hasNewMessage, _setHasNewMessage] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [hasNewMessage, setHasNewMessage] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
   const [typingByConversation, setTypingByConversation] = useState<
     Record<number, number[]>
   >({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<{
+    id: number;
+    conversationId: number;
+    content: string;
+  } | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    number | null
+  >(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -211,7 +231,7 @@ export default function MessagePage() {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-    _setHasNewMessage(false);
+    setHasNewMessage(false);
   };
 
   const handleConversationSelect = (conversationId: string) => {
@@ -237,7 +257,7 @@ export default function MessagePage() {
   useEffect(() => {
     if (conversationId && conversations.length > 0) {
       const foundConversation = conversations.find(
-        (c) => c.id.toString() === conversationId
+        (c) => c?.id?.toString() === conversationId
       );
       if (foundConversation) {
         setSelectedConversationId(conversationId);
@@ -340,7 +360,7 @@ export default function MessagePage() {
             }
           }, 0);
         } else {
-          _setHasNewMessage(true);
+          setHasNewMessage(true);
         }
       }
 
@@ -349,7 +369,7 @@ export default function MessagePage() {
         if (idx === -1) return prev;
         const updated = [...prev];
         const conv = { ...updated[idx] };
-        conv.lastMessage = message;
+
         if (
           (!selectedConversationId ||
             selectedConversationId !== String(message.conversationId)) &&
@@ -357,8 +377,9 @@ export default function MessagePage() {
         ) {
           conv.unreadCount = (conv.unreadCount || 0) + 1;
         }
-        updated.splice(idx, 1);
-        return [conv, ...updated];
+
+        updated[idx] = conv;
+        return updated;
       });
     });
 
@@ -366,22 +387,38 @@ export default function MessagePage() {
       setMessages((prev) => prev.filter((m) => m.id !== deleted.id));
     });
 
+    socket.on("message_reaction", ({ result }) => {
+      const { message: updatedMessage } = result;
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === updatedMessage.id
+            ? { ...msg, reactions: updatedMessage.reactions }
+            : msg
+        )
+      );
+    });
+
     socket.on(
       "message_seen",
       ({
         conversationId,
-        userId,
+        user,
+        messages,
       }: {
         conversationId: number;
-        userId: number;
+        user: User;
+        messages: Message[];
       }) => {
         if (
           selectedConversationId &&
           String(conversationId) === selectedConversationId
         ) {
+          console.log("user", user);
+          console.log("messages", messages);
           setMessages((prev) =>
             prev.map((m) => {
-              const exists = m.seenBy?.some((s) => s.userId === userId);
+              const exists = m.seenBy?.some((s) => s.userId === user.id);
               if (exists) return m;
               return {
                 ...m,
@@ -389,14 +426,14 @@ export default function MessagePage() {
                   ...(m.seenBy || []),
                   {
                     messageId: m.id,
-                    userId,
+                    userId: user.id,
                     createdAt: new Date().toISOString(),
                     user: {
-                      id: userId,
-                      username: "",
-                      firstName: "",
-                      lastName: "",
-                      avatar: DEFAULT_AVATAR_URL,
+                      id: user.id,
+                      username: user.username,
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      avatar: user.avatar || null,
                     },
                   },
                 ],
@@ -415,14 +452,41 @@ export default function MessagePage() {
     socket.on(
       "conversation_update",
       ({ conversationId }: { conversationId: number }) => {
-        setConversations((prev) => {
-          const idx = prev.findIndex((c) => c.id === conversationId);
-          if (idx === -1) return prev;
-          const updated = [...prev];
-          const conv = updated[idx];
-          updated.splice(idx, 1);
-          return [conv, ...updated];
-        });
+        if (conversationUpdateTimeoutRef.current[conversationId]) {
+          clearTimeout(conversationUpdateTimeoutRef.current[conversationId]);
+        }
+
+        conversationUpdateTimeoutRef.current[conversationId] = setTimeout(
+          async () => {
+            try {
+              const updatedConversation = await getConversation(conversationId);
+
+              if (updatedConversation) {
+                setConversations((prev) => {
+                  const idx = prev.findIndex((c) => c.id === conversationId);
+                  if (idx === -1) return prev;
+
+                  const updated = [...prev];
+
+                  updated[idx] = updatedConversation;
+
+                  updated.splice(idx, 1);
+
+                  if (updatedConversation.lastMessage) {
+                    return [updatedConversation, ...updated];
+                  } else {
+                    return [...updated, updatedConversation];
+                  }
+                });
+              }
+            } catch (error) {
+              console.error("Failed to update conversation:", error);
+            }
+
+            delete conversationUpdateTimeoutRef.current[conversationId];
+          },
+          100
+        );
       }
     );
 
@@ -454,7 +518,7 @@ export default function MessagePage() {
   };
 
   const handleChangeMessage = (value: string) => {
-    _setNewMessage(value);
+    setNewMessage(value);
   };
 
   const handleSendMessage = () => {
@@ -464,10 +528,11 @@ export default function MessagePage() {
       conversationId: Number(selectedConversationId),
       content: newMessage.trim(),
       type: "TEXT" as const,
-      replyOf: null as number | null,
+      replyOf: replyingTo?.id || null,
     };
     socketRef.current.emit("send_message", payload);
-    _setNewMessage("");
+    setNewMessage("");
+    setReplyingTo(null);
 
     handleTyping(false);
 
@@ -477,7 +542,104 @@ export default function MessagePage() {
       }
     }, 0);
     isAtBottomRef.current = true;
-    _setHasNewMessage(false);
+    setHasNewMessage(false);
+  };
+
+  const handleDeleteMessage = (message: Message) => {
+    setMessageToDelete({
+      id: message.id,
+      conversationId: message.conversationId,
+      content: message.content,
+    });
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteMessage = () => {
+    if (!socketRef.current || !messageToDelete) return;
+    socketRef.current.emit("delete_message", {
+      messageId: messageToDelete.id,
+      conversationId: messageToDelete.conversationId,
+    });
+    setMessageToDelete(null);
+    setDeleteModalOpen(false);
+  };
+
+  const handleReplyMessage = (message: Message) => {
+    setReplyingTo(message);
+  };
+
+  const handleReplyClick = (replyToMessageId: number) => {
+    const targetMessage = messages.find((msg) => msg.id === replyToMessageId);
+    if (!targetMessage) return;
+
+    setHighlightedMessageId(replyToMessageId);
+
+    const messageElement = document.getElementById(
+      `message-${replyToMessageId}`
+    );
+    if (messageElement && messageContainerRef.current) {
+      messageElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+
+    setTimeout(() => {
+      setHighlightedMessageId(null);
+    }, 3000);
+  };
+
+  const handleReactionToggle = (
+    messageId: number,
+    conversationId: number,
+    emoji: string
+  ) => {
+    if (!socketRef.current) return;
+
+    socketRef.current.emit("toggle_reaction", {
+      messageId,
+      conversationId,
+      reaction: emoji,
+    });
+  };
+
+  const getLastSeenMessageForUsers = (messages: Message[]) => {
+    const lastSeenMap = new Map<number, number>();
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.seenBy) {
+        for (const seen of message.seenBy) {
+          if (!lastSeenMap.has(seen.userId)) {
+            lastSeenMap.set(seen.userId, message.id);
+          }
+        }
+      }
+    }
+
+    return lastSeenMap;
+  };
+
+  const getUsersWhoLastSeenThisMessage = (message: Message) => {
+    if (!message.seenBy || message.seenBy.length === 0) return [];
+
+    const lastSeenMap = getLastSeenMessageForUsers(messages);
+
+    return message.seenBy.filter(
+      (seen) => lastSeenMap.get(seen.userId) === message.id
+    );
+  };
+
+  const shouldShowSeenBy = (message: Message, isMyMessage: boolean) => {
+    if (!message.seenBy || message.seenBy.length === 0) return false;
+
+    if (!isMyMessage) {
+      const isLastMessage = message.id === messages[messages.length - 1]?.id;
+      return isLastMessage;
+    }
+
+    const usersWhoLastSeenThis = getUsersWhoLastSeenThisMessage(message);
+    return usersWhoLastSeenThis.length > 0;
   };
 
   useEffect(() => {
@@ -510,7 +672,7 @@ export default function MessagePage() {
           onClick={() => {
             fetchConversations();
           }}
-          className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md hover:shadow-lg"
+          className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md hover:shadow-lg cursor-pointer"
         >
           Thử lại
         </button>
@@ -571,7 +733,7 @@ export default function MessagePage() {
                         selectedConversationId &&
                         fetchMessages(selectedConversationId)
                       }
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                     >
                       Thử lại
                     </button>
@@ -602,7 +764,6 @@ export default function MessagePage() {
                         const sender = getSenderAsMember(message);
                         const isMyMessage =
                           sender.id === currentUserAsMember?.id;
-                        const isLastMessage = index === messages.length - 1;
                         const showAvatar = !isMyMessage;
 
                         const previousMessage =
@@ -614,144 +775,177 @@ export default function MessagePage() {
                               sender.id);
 
                         return (
-                          <div key={message.id}>
+                          <div
+                            key={message.id}
+                            id={`message-${message.id}`}
+                            className={`transition-all duration-500 ${
+                              highlightedMessageId === message.id
+                                ? "bg-yellow-100 rounded-lg p-2 -m-2"
+                                : ""
+                            }`}
+                          >
                             <div
-                              className={`flex items-start space-x-3 group ${
+                              className={`flex items-start space-x-3 group relative ${
                                 isMyMessage ? "justify-end" : "justify-start"
                               }`}
                             >
                               {showAvatar && (
                                 <div className="flex-shrink-0">
                                   {shouldShowAvatar ? (
-                                    <img
-                                      src={sender.avatar || DEFAULT_AVATAR_URL}
-                                      alt={`${sender.firstName} ${sender.lastName}`}
-                                      title={`${sender.firstName} ${sender.lastName}`}
-                                      className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                    />
+                                    <Tooltip
+                                      content={`${sender.firstName} ${sender.lastName}`}
+                                      position="left"
+                                      delay={400}
+                                    >
+                                      <img
+                                        src={
+                                          sender.avatar || DEFAULT_AVATAR_URL
+                                        }
+                                        alt={`${sender.firstName} ${sender.lastName}`}
+                                        className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                      />
+                                    </Tooltip>
                                   ) : (
                                     <div className="w-8 h-8" />
                                   )}
                                 </div>
                               )}
 
-                              <div className="flex items-center space-x-3">
-                                <div
-                                  className={`max-w-[70%] rounded-lg p-3 relative ${
-                                    isMyMessage
-                                      ? "bg-blue-500 text-white"
-                                      : "bg-gray-200 text-gray-800"
-                                  }`}
-                                >
-                                  <p className="text-sm">{message.content}</p>
+                              <div className="flex items-center space-x-2">
+                                <div className="max-w-[70%]">
+                                  <Tooltip
+                                    content={`${new Date(
+                                      message.createdAt
+                                    ).toLocaleDateString("vi-VN", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })} lúc ${new Date(
+                                      message.createdAt
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}`}
+                                    position={isMyMessage ? "left" : "right"}
+                                    delay={300}
+                                  >
+                                    <div className="relative">
+                                      <div
+                                        className={`rounded-lg p-3 cursor-pointer ${
+                                          isMyMessage
+                                            ? "bg-blue-500 text-white"
+                                            : "bg-gray-200 text-gray-800"
+                                        }`}
+                                      >
+                                        {message.replyToMessage && (
+                                          <div
+                                            onClick={() =>
+                                              handleReplyClick(
+                                                message.replyToMessage!.id
+                                              )
+                                            }
+                                            className={`text-xs mb-2 p-2 rounded border-l-2 cursor-pointer hover:scale-[1.02] transition-all duration-200 ${
+                                              isMyMessage
+                                                ? "bg-blue-400 border-blue-200 text-blue-100 hover:bg-blue-300"
+                                                : "bg-gray-100 border-gray-400 text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                          >
+                                            <div className="font-medium">
+                                              {
+                                                message.replyToMessage
+                                                  .senderUser.firstName
+                                              }{" "}
+                                              {
+                                                message.replyToMessage
+                                                  .senderUser.lastName
+                                              }
+                                            </div>
+                                            <div className="truncate">
+                                              {message.replyToMessage.content}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <p className="text-sm">
+                                          {message.content}
+                                        </p>
+                                      </div>
+
+                                      <ReactionSummary
+                                        reactions={message.reactions || []}
+                                        isMyMessage={isMyMessage}
+                                      />
+                                    </div>
+                                  </Tooltip>
                                 </div>
 
                                 <div
-                                  className={`text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                                  className={`flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white rounded-full shadow-sm ${
                                     isMyMessage ? "order-first" : ""
                                   }`}
                                 >
-                                  {new Date(
-                                    message.createdAt
-                                  ).toLocaleDateString("vi-VN", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  })}{" "}
-                                  {new Date(
-                                    message.createdAt
-                                  ).toLocaleTimeString("vi-VN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
+                                  <MessageReactions
+                                    reactions={message.reactions || []}
+                                    messageId={message.id}
+                                    conversationId={message.conversationId}
+                                    currentUserId={
+                                      currentUserAsMember?.id || null
+                                    }
+                                    onReactionToggle={handleReactionToggle}
+                                    showOnlyTrigger={true}
+                                  />
+
+                                  <Tooltip
+                                    content="Trả lời tin nhắn"
+                                    position="top"
+                                    delay={200}
+                                  >
+                                    <button
+                                      onClick={() =>
+                                        handleReplyMessage(message)
+                                      }
+                                      className="p-2 rounded-full hover:bg-blue-50 text-gray-500 hover:text-blue-600 transition-all duration-200 hover:scale-110 cursor-pointer"
+                                    >
+                                      <Reply size={16} />
+                                    </button>
+                                  </Tooltip>
+                                  {isMyMessage && (
+                                    <Tooltip
+                                      content="Xóa tin nhắn"
+                                      position="top"
+                                      delay={200}
+                                    >
+                                      <button
+                                        onClick={() =>
+                                          handleDeleteMessage(message)
+                                        }
+                                        className="p-2 rounded-full hover:bg-red-50 text-gray-500 hover:text-red-600 transition-all duration-200 hover:scale-110 cursor-pointer"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </Tooltip>
+                                  )}
                                 </div>
                               </div>
                             </div>
 
-                            {isLastMessage &&
-                              !isMyMessage &&
-                              message.seenBy && (
-                                <div className="flex justify-end mt-2">
-                                  <div className="flex space-x-1">
-                                    {message.seenBy
-                                      ?.filter(
-                                        (seenItem) =>
-                                          seenItem.userId !== sender.id &&
-                                          seenItem.userId !==
-                                            currentUserAsMember?.id
-                                      )
-                                      .slice(0, 3)
-                                      .map((seenItem) => (
-                                        <img
-                                          key={seenItem.userId}
-                                          src={
-                                            seenItem.user.avatar ||
-                                            DEFAULT_AVATAR_URL
-                                          }
-                                          alt={`${seenItem.user.firstName} ${seenItem.user.lastName} đã xem`}
-                                          className="w-4 h-4 rounded-full object-cover border border-white"
-                                          title={`${seenItem.user.firstName} ${seenItem.user.lastName} đã xem`}
-                                        />
-                                      ))}
-                                    {message.seenBy &&
-                                      message.seenBy.filter(
-                                        (seenItem) =>
-                                          seenItem.userId !== sender.id &&
-                                          seenItem.userId !==
-                                            currentUserAsMember?.id
-                                      ).length > 3 && (
-                                        <div className="w-4 h-4 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center font-semibold">
-                                          +
-                                          {message.seenBy.filter(
-                                            (seenItem) =>
-                                              seenItem.userId !== sender.id &&
-                                              seenItem.userId !==
-                                                currentUserAsMember?.id
-                                          ).length - 3}
-                                        </div>
-                                      )}
-                                  </div>
-                                </div>
-                              )}
-
-                            {isLastMessage && isMyMessage && message.seenBy && (
-                              <div className="flex justify-end mt-2 mr-2">
-                                <div className="flex space-x-1">
-                                  {message.seenBy
-                                    ?.filter(
-                                      (seenItem) =>
-                                        seenItem.userId !==
-                                        currentUserAsMember?.id
-                                    )
-                                    .slice(0, 3)
-                                    .map((seenItem) => (
-                                      <img
-                                        key={seenItem.userId}
-                                        src={
-                                          seenItem.user.avatar ||
-                                          DEFAULT_AVATAR_URL
-                                        }
-                                        alt={`${seenItem.user.firstName} ${seenItem.user.lastName} đã xem`}
-                                        className="w-4 h-4 rounded-full object-cover border border-white"
-                                        title={`${seenItem.user.firstName} ${seenItem.user.lastName} đã xem`}
-                                      />
-                                    ))}
-                                  {message.seenBy &&
-                                    message.seenBy.filter(
-                                      (seenItem) =>
-                                        seenItem.userId !==
-                                        currentUserAsMember?.id
-                                    ).length > 3 && (
-                                      <div className="w-4 h-4 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center font-semibold">
-                                        +
-                                        {message.seenBy.filter(
-                                          (seenItem) =>
-                                            seenItem.userId !==
-                                            currentUserAsMember?.id
-                                        ).length - 3}
-                                      </div>
-                                    )}
-                                </div>
+                            {shouldShowSeenBy(message, isMyMessage) && (
+                              <div
+                                className={`flex justify-end mt-2 ${
+                                  isMyMessage ? "mr-2" : ""
+                                }`}
+                              >
+                                <SeenByAvatars
+                                  seenByToDisplay={
+                                    isMyMessage
+                                      ? getUsersWhoLastSeenThisMessage(message)
+                                      : message.seenBy
+                                  }
+                                  seenBy={message.seenBy}
+                                  currentUserId={
+                                    currentUserAsMember?.id || null
+                                  }
+                                  senderId={sender.id}
+                                />
                               </div>
                             )}
                           </div>
@@ -822,7 +1016,10 @@ export default function MessagePage() {
                 onChange={handleChangeMessage}
                 onSend={handleSendMessage}
                 onTyping={handleTyping}
-                onCancelReply={() => _setReplyingTo(null)}
+                onCancelReply={() => setReplyingTo(null)}
+                onEmojiSelect={(emoji) => {
+                  handleChangeMessage(newMessage + emoji);
+                }}
               />
             </>
           ) : (
@@ -842,6 +1039,16 @@ export default function MessagePage() {
         type="file"
         accept="image/*"
         className="hidden"
+      />
+
+      <DeleteConfirm
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setMessageToDelete(null);
+        }}
+        onConfirm={confirmDeleteMessage}
+        type="message"
       />
     </div>
   );

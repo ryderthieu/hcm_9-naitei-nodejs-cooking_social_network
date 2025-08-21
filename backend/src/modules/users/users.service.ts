@@ -30,10 +30,11 @@ const USER_SELECT_FIELDS = {
   updatedAt: true,
   _count: {
     select: {
-      followers: true, 
-      following: true, 
+      followers: true,
+      following: true,
       authoredRecipes: true,
       authoredPosts: true,
+      savedPosts: true,
     },
   },
 } as const;
@@ -101,7 +102,10 @@ export class UsersService {
     });
   }
 
-  async getUserByUsername(username: string, currentUser?: User): Promise<SingleUserResponseDto> {
+  async getUserByUsername(
+    username: string,
+    currentUser?: User,
+  ): Promise<SingleUserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: USER_SELECT_FIELDS,
@@ -113,16 +117,26 @@ export class UsersService {
 
     const userDto = this.createUserResponseDto(user);
 
-    if (currentUser && currentUser.id !== user.id) {
+    if (currentUser && currentUser.id && currentUser.id !== user.id) {
       const followStatus = await this.checkFollowStatus(currentUser, username);
-      (userDto as any).isFollowing = followStatus.isFollowing;
+      userDto.isFollowing = followStatus.isFollowing;
+    } else {
+      userDto.isFollowing = false;
     }
-
     return new SingleUserResponseDto(userDto);
   }
 
   async getCurrentUser(currentUser: User): Promise<SingleUserResponseDto> {
-    const userDto = this.createUserResponseDto(currentUser);
+    const userWithCount = await this.prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: USER_SELECT_FIELDS,
+    });
+
+    if (!userWithCount) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userDto = this.createUserResponseDto(userWithCount);
     return new SingleUserResponseDto(userDto);
   }
 
@@ -235,7 +249,10 @@ export class UsersService {
     });
   }
 
-  async followUser(currentUser: User, username: string): Promise<{ message: string }> {
+  async followUser(
+    currentUser: User,
+    username: string,
+  ): Promise<{ message: string }> {
     const targetUser = await this.prisma.user.findUnique({
       where: { username },
       select: { id: true, username: true },
@@ -272,7 +289,10 @@ export class UsersService {
     return { message: `Successfully followed ${targetUser.username}` };
   }
 
-  async unfollowUser(currentUser: User, username: string): Promise<{ message: string }> {
+  async unfollowUser(
+    currentUser: User,
+    username: string,
+  ): Promise<{ message: string }> {
     const targetUser = await this.prisma.user.findUnique({
       where: { username },
       select: { id: true, username: true },
@@ -358,7 +378,9 @@ export class UsersService {
     ]);
 
     const followers = relationships.map((rel) => rel.follower);
-    const userDtos = followers.map((follower) => this.createUserResponseDto(follower));
+    const userDtos = followers.map((follower) =>
+      this.createUserResponseDto(follower),
+    );
 
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
@@ -421,7 +443,9 @@ export class UsersService {
     ]);
 
     const following = relationships.map((rel) => rel.following);
-    const userDtos = following.map((followedUser) => this.createUserResponseDto(followedUser));
+    const userDtos = following.map((followedUser) =>
+      this.createUserResponseDto(followedUser),
+    );
 
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
@@ -441,7 +465,7 @@ export class UsersService {
     currentUser: User | null,
     targetUsername: string,
   ): Promise<{ isFollowing: boolean }> {
-    if (!currentUser) {
+    if (!currentUser || !currentUser.id) {
       return { isFollowing: false };
     }
 
@@ -462,7 +486,6 @@ export class UsersService {
         },
       },
     });
-
     return { isFollowing: !!relationship };
   }
 }

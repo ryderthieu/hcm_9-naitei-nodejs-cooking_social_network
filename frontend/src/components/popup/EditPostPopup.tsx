@@ -8,7 +8,7 @@ import { updatePost } from "../../services/post.service";
 import { showErrorAlert } from "../../utils/errorHandler";
 import RecipeSelectionModal from "./RecipeSelectionModal";
 import type { RecipeListItem } from "../../services/recipe.service";
-import { getAccessToken } from "../../services/api.service";
+import { uploadFiles } from "../../services/upload.service";
 
 interface EditPostPopupProps {
   post: PostEntity;
@@ -115,33 +115,9 @@ export default function EditPostPopup({
   };
 
   const uploadMediaToCloudinary = async (files: File[]) => {
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('files', file);
-    });
-
-    const token = getAccessToken();
-    
-    if (!token) {
-      throw new Error('No access token found. Please login again.');
-    }
-
     try {
-      const response = await fetch('http://localhost:3000/api/cloudinary/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      return data;
+      const uploadedMedia = await uploadFiles(files);
+      return uploadedMedia;
     } catch (error) {
       throw error;
     }
@@ -167,9 +143,9 @@ export default function EditPostPopup({
         
         const uploadedMediaItems: PostMedia[] = uploadedMedia.map((item: any, index: number) => ({
           id: Date.now() + index,
-          url: item.url || item.secure_url,
-          type: (item.resourceType || item.resource_type || 'image').toUpperCase() as 'IMAGE' | 'VIDEO',
-          public_id: item.publicId || item.public_id,
+          url: item.url,
+          type: (item.resourceType || 'image').toUpperCase() as 'IMAGE' | 'VIDEO',
+          public_id: item.publicId,
         }));
 
         finalMedia = [...finalMedia, ...uploadedMediaItems];
@@ -251,7 +227,7 @@ export default function EditPostPopup({
                 </div>
                 <div className="ml-3">
                   <span className="font-semibold text-gray-800">
-                    {post.author.first_name} {post.author.last_name}
+                    {post.author.firstName} {post.author.lastName}
                   </span>
                   <p className="text-sm text-gray-500">Đăng công khai</p>
                 </div>

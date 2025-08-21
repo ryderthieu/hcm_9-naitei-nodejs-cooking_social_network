@@ -1,4 +1,4 @@
-import arrowRightImage from "../../../assets/Home/Polygon 3.png";
+import arrowRightImage from "../../../assets/home/Polygon 3.png";
 import React from "react";
 
 interface ArrowRightProps extends React.ImgHTMLAttributes<HTMLImageElement> {

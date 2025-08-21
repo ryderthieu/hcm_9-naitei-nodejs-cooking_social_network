@@ -1,9 +1,7 @@
 import blog1 from "../../../assets/blog/blog1.png";
 import blog2 from "../../../assets/blog/blog2.png";
 import blog from "../../../assets/blog/blog3.png";
-
-const DEFAULT_AVATAR_URL =
-  "https://res.cloudinary.com/dfaq5hbmx/image/upload/v1749033098/general/bseoimm2ya0utf2duyyu.png";
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 
 const featuredRecipes = [
   {
@@ -11,7 +9,7 @@ const featuredRecipes = [
     author: "Trịnh Thị Phương Quỳnh",
     desc: "Khám phá những bài viết phổ biến nhất trong cộng đồng nấu ăn của chúng ta. Từ công thức đơn giản đến mẹo nấu ăn hữu ích, bạn sẽ tìm thấy nhiều thông tin thú vị.",
     date: "2023-10-01",
-    path: "/blog/bai-viet-pho-bien",
+    path: "/blog/trending-article",
     image: blog1,
     ava: DEFAULT_AVATAR_URL,
   },
@@ -19,7 +17,7 @@ const featuredRecipes = [
     name: "Bài viết mới nhất",
     author: "Huỳnh Văn Thiệu",
     desc: "Cập nhật những bài viết mới nhất từ cộng đồng nấu ăn. Tìm hiểu các công thức mới, mẹo nấu ăn và xu hướng ẩm thực hiện đại.",
-    path: "/blog/bai-viet-moi",
+    path: "/blog/new-article",
     image: blog,
     ava: DEFAULT_AVATAR_URL,
     date: "2023-10-05",
@@ -28,7 +26,7 @@ const featuredRecipes = [
     name: "Bài viết nổi bật",
     author: "Trần Đỗ Phương Nhi",
     desc: "Khám phá những bài viết nổi bật trong cộng đồng nấu ăn. Những công thức độc đáo và mẹo nấu ăn sáng tạo đang chờ đón bạn.",
-    path: "/blog/bai-viet-noi-bat",
+    path: "/blog/highlighted-article",
     image: blog2,
     ava: DEFAULT_AVATAR_URL,
     date: "2023-10-10",

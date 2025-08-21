@@ -5,12 +5,14 @@ import {
   MealType,
   Cuisine,
 } from "../../../utils/enumMaps";
+import { useNavigate } from "react-router-dom";
 
 interface CategoryDto {
   mealType?: MealType;
   cuisine?: Cuisine;
 }
 interface RecipeCardProps {
+  id: number;
   image: string | string[];
   category: CategoryDto;
   title: string;
@@ -20,6 +22,7 @@ interface RecipeCardProps {
 }
 
 const RecipeCard = ({
+  id,
   image,
   category,
   title,
@@ -27,6 +30,7 @@ const RecipeCard = ({
   author,
   isFavorite = false,
 }: RecipeCardProps) => {
+  const navigate = useNavigate();
   const displayImage = Array.isArray(image) ? image[0] : image;
 
   return (
@@ -73,7 +77,10 @@ const RecipeCard = ({
           </div>
         </div>
 
-        <button className="w-full bg-gradient-to-r from-orange-400 to-yellow-400 text-white py-2 rounded-full font-medium hover:opacity-90 transition">
+        <button
+          onClick={() => navigate(`/detail-recipe/${id}`)}
+          className="cursor-pointer w-full bg-gradient-to-r from-orange-400 to-yellow-400 text-white py-2 rounded-full font-medium hover:opacity-90 transition"
+        >
           Xem công thức
         </button>
       </div>

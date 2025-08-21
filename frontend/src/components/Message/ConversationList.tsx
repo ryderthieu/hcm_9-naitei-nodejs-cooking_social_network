@@ -81,7 +81,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               conversation.name ||
               (otherMembers.length === 1
                 ? `${otherMembers[0].firstName} ${otherMembers[0].lastName}`
-                : `Nhóm ${otherMembers.length} người`);
+                : otherMembers.map((m) => m.firstName).join(", "));
 
             return (
               <div
