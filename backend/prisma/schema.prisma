@@ -130,6 +130,7 @@ model User {
   conversationMembers   Member[]
   sentMessages          Message[]         @relation("MessageSender")
   seenMessages          Seen[]
+  messageReactions      MessageReaction[]
   sentNotifications     Notification[]    @relation("NotificationSender")
   receivedNotifications Notification[]    @relation("NotificationReceiver")
 }
@@ -406,16 +407,29 @@ model Message {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderUser     User         @relation("MessageSender", fields: [sender], references: [id], onDelete: Cascade)
-  replyToMessage Message?     @relation("MessageReply", fields: [replyOf], references: [id], onDelete: SetNull)
-  replies        Message[]    @relation("MessageReply")
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser     User              @relation("MessageSender", fields: [sender], references: [id], onDelete: Cascade)
+  replyToMessage Message?          @relation("MessageReply", fields: [replyOf], references: [id], onDelete: SetNull)
+  replies        Message[]         @relation("MessageReply")
   seenBy         Seen[]
+  reactions      MessageReaction[]
 }
 
 model Seen {
   messageId Int
   userId    Int
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}
+
+model MessageReaction {
+  messageId Int
+  userId    Int
+  emoji     String
   createdAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)

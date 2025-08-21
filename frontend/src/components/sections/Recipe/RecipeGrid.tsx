@@ -9,7 +9,7 @@ interface CategoryDto {
   cuisine?: Cuisine;
 }
 interface Recipe {
-  id?: string;
+  id?: number;
   _id?: string;
   image: string;
   category: CategoryDto;
@@ -93,6 +93,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
             {recipes.map((recipe, index) => (
               <RecipeCard
                 key={recipe._id || recipe.id || index}
+                id={Number(recipe.id ?? recipe._id) || 0}
                 image={recipe.image}
                 category={recipe.category}
                 title={recipe.title}

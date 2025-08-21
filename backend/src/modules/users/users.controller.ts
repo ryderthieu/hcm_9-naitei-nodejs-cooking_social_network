@@ -73,7 +73,7 @@ export class UsersController {
   @UseGuards(OptionalAuthGuard)
   async getUserByUsername(
     @Param('username') username: string,
-    @CurrentUser() currentUser?: User,
+    @CurrentUser('user') currentUser?: User,
   ): Promise<SingleUserResponseDto> {
     return this.usersService.getUserByUsername(username, currentUser);
   }
@@ -125,7 +125,7 @@ export class UsersController {
   @Get(':username/follow-status')
   @UseGuards(OptionalAuthGuard)
   async checkFollowStatus(
-    @CurrentUser() currentUser: User | null,
+    @CurrentUser('user') currentUser: User | null,
     @Param('username') username: string,
   ): Promise<{ isFollowing: boolean }> {
     return this.usersService.checkFollowStatus(currentUser, username);

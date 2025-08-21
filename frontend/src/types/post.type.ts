@@ -2,8 +2,8 @@ export type MediaType = "IMAGE" | "VIDEO";
 
 export interface PostAuthor {
   id: number;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   avatar: string | null;
   username?: string;
 }

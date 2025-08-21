@@ -4,6 +4,7 @@ import type {
   PostResponse,
   PostsResponse,
   UpdatePostDto,
+  PostEntity,
 } from "../types/post.type";
 
 function buildQuery(params?: Record<string, any>) {
@@ -24,12 +25,30 @@ export async function fetchPosts(params?: FilterPostsDto) {
   return res.data;
 }
 
-export async function fetchPost(postId: number) {
+export async function getPostById(postId: number) {
   const res = await get<PostResponse>(`/posts/${postId}`);
   return res.data;
 }
 
+export async function getPostsByUser(username: string) {
+  try {
+    const queryString = buildQuery({ username });
+    const res = await get<PostsResponse>(`/posts${queryString}`);
+    return res.data.posts;
+  } catch (error) {
+    throw error;
+  }
+}
 
+export async function getSavedPosts(username: string) {
+  try {
+    const queryString = buildQuery({ savedBy: true });
+    const res = await get<PostsResponse>(`/posts${queryString}`);
+    return res.data.posts;
+  } catch (error) {
+    throw error;
+  }
+}
 
 export async function updatePost(postId: number, dto: UpdatePostDto) {
   const res = await put<PostResponse>(`/posts/${postId}`, { post: dto });
