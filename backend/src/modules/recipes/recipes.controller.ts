@@ -72,7 +72,7 @@ export class RecipesController {
   @UseGuards(AuthGuard('jwt'))
   async createRating(
     @Param('id') id: number,
-    @Body('rating') createRatingDto: CreateRatingDto,
+    @Body() createRatingDto: CreateRatingDto,
     @CurrentUser('user') user: User,
   ) {
     return this.recipesService.createRating(createRatingDto, user, id);
@@ -82,7 +82,7 @@ export class RecipesController {
   @UseGuards(AuthGuard('jwt'))
   async updateRating(
     @Param('ratingId') ratingId: number,
-    @Body('rating') updateRatingDto: UpdateRatingDto,
+    @Body() updateRatingDto: UpdateRatingDto,
     @CurrentUser('user') user: User,
     @Param('id') recipeId: number,
   ) {
@@ -109,5 +109,14 @@ export class RecipesController {
     @Param('id') recipeId: number,
   ) {
     return this.recipesService.getRatings(query, recipeId);
+  }
+
+  @Get(':id/rating/me')
+  @UseGuards(AuthGuard('jwt'))
+  async getUserRating(
+    @Param('id') recipeId: number,
+    @CurrentUser('user') user: User,
+  ) {
+    return this.recipesService.findUserReviewForRecipe(recipeId, user.id);
   }
 }

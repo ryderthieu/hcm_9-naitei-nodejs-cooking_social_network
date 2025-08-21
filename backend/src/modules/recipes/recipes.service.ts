@@ -601,7 +601,9 @@ export class RecipesService {
 
     const { rating, limit = LIMIT_DEFAULT, page = PAGE_DEFAULT } = query;
 
-    const where: any = {};
+    const where: any = {
+      recipeId: recipeId,
+    };
 
     if (rating) {
       where.rating = {
@@ -628,18 +630,34 @@ export class RecipesService {
               },
             },
           },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+            },
+          },
         },
       }),
       this.prisma.recipeRating.count({ where }),
     ]);
 
     return {
-      rating: [...ratings],
+      ratings,
       meta: {
         total,
         page,
         limit,
       },
     };
+  }
+
+  async findUserReviewForRecipe(recipeId: number, userId: number) {
+    const review = await this.prisma.recipeRating.findFirst({
+      where: { recipeId: recipeId, userId: userId },
+      include: { user: true },
+    });
+    return review;
   }
 }

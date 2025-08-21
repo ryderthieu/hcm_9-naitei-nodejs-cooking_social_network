@@ -18,6 +18,7 @@ import Blog2 from "../pages/blog/Blog2";
 import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
+import DetailRecipe from "../pages/recipe/DetailRecipe";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
 
 export default function AppRouter() {
@@ -130,6 +131,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <Blog4 />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/detail-recipe"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <DetailRecipe />
           </MainLayout>
         }
       />

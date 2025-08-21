@@ -67,6 +67,20 @@ export interface QueryRecipesDto {
   page?: number;
 }
 
+export interface RatingDto {
+  id: number;
+  recipeId: number;
+  rating: number;
+  comment?: string;
+  createdAt: Date;
+  user: {
+    userId: number;
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+  };
+}
+
 export interface CreateRatingDto {
   rating: number;
   comment?: string;
