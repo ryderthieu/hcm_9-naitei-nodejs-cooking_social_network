@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { Info, MessageSquareText, Reply, Trash2 } from "lucide-react";
+import { Info, MessageSquareText, Reply, Trash2, Video } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { API_CONSTANTS } from "../../../constants/constants";
 
@@ -20,6 +20,7 @@ import type {
   Member,
   Message,
   MessagesResponse,
+  MessageType,
 } from "../../../types/conversation.type";
 import type { User } from "../../../types/auth.type";
 import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
@@ -94,7 +95,6 @@ export default function MessagePage() {
   const prevScrollTopRef = useRef<number>(0);
   const lastScrollTopRef = useRef<number>(0);
   const isProgrammaticScrollRef = useRef<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { user, loading: isAuthLoading } = useAuth();
 
@@ -345,22 +345,45 @@ export default function MessagePage() {
         selectedConversationId &&
         message.conversationId.toString() === selectedConversationId
       ) {
-        setMessages((prev) => [...prev, message]);
-
         if (message.senderUser.id !== user.id) {
+          setMessages((prev) => [...prev, message]);
+
           socket.emit("mark_as_seen", {
             conversationId: message.conversationId,
           });
+
+          if (!isAtBottomRef.current) {
+            setHasNewMessage(true);
+          }
+        } else {
+          if (message.type === "MEDIA") {
+            setMessages((prev) => [...prev, message]);
+          } else {
+            setMessages((prev) => {
+              const tempMessageIndex = prev.findIndex((msg) => {
+                if (msg.type === "TEXT" && msg.senderUser.id === user?.id) {
+                  return msg.content === message.content;
+                }
+                return false;
+              });
+
+              if (tempMessageIndex !== -1) {
+                const updated = [...prev];
+                updated[tempMessageIndex] = message;
+                return updated;
+              } else {
+                return [...prev, message];
+              }
+            });
+          }
         }
 
-        if (isAtBottomRef.current || message.senderUser.id === user.id) {
+        if (isAtBottomRef.current || message.senderUser.id === user?.id) {
           setTimeout(() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
             }
           }, 0);
-        } else {
-          setHasNewMessage(true);
         }
       }
 
@@ -521,19 +544,44 @@ export default function MessagePage() {
     setNewMessage(value);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !socketRef.current || !selectedConversationId)
       return;
+
+    const messageText = newMessage.trim();
+
+    const tempMessage: Message = {
+      id: Date.now(),
+      content: messageText,
+      type: "TEXT" as MessageType,
+      conversationId: parseInt(selectedConversationId),
+      sender: user!.id,
+      senderUser: {
+        id: user!.id,
+        username: user!.username,
+        firstName: user!.firstName,
+        lastName: user!.lastName,
+        avatar: user!.avatar || DEFAULT_AVATAR_URL,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      replyOf: replyingTo?.id || null,
+      replyToMessage: replyingTo,
+      reactions: [],
+      seenBy: [],
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
+
     const payload = {
       conversationId: Number(selectedConversationId),
-      content: newMessage.trim(),
-      type: "TEXT" as const,
+      content: messageText,
+      type: "TEXT" as MessageType,
       replyOf: replyingTo?.id || null,
     };
     socketRef.current.emit("send_message", payload);
     setNewMessage("");
     setReplyingTo(null);
-
     handleTyping(false);
 
     setTimeout(() => {
@@ -544,6 +592,53 @@ export default function MessagePage() {
     isAtBottomRef.current = true;
     setHasNewMessage(false);
   };
+
+  const uploadSingleFile = async (file: File) => {
+    if (!socketRef.current || !selectedConversationId) return;
+
+    const preview = URL.createObjectURL(file);
+
+    try {
+      const { uploadFiles } = await import("../../../services/upload.service");
+      const results = await uploadFiles([file]);
+
+      if (results && results.length > 0) {
+        const result = results[0];
+        const isVideoResult =
+          (result.resourceType || "").toLowerCase() === "video";
+        const contentPayload = JSON.stringify({
+          url: result.url,
+          kind: isVideoResult ? "VIDEO" : "IMAGE",
+        });
+
+        socketRef.current.emit("send_message", {
+          conversationId: Number(selectedConversationId),
+          content: contentPayload,
+          type: "MEDIA" as MessageType,
+          replyOf: replyingTo?.id || null,
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to upload file ${file.name}:`, error);
+    } finally {
+      setTimeout(() => {
+        URL.revokeObjectURL(preview);
+      }, 1000);
+    }
+
+    setReplyingTo(null);
+  };
+
+  const handleFilesSelected = useCallback(
+    (files: File[]) => {
+      if (!socketRef.current || !selectedConversationId) return;
+
+      files.forEach((file) => {
+        uploadSingleFile(file);
+      });
+    },
+    [selectedConversationId]
+  );
 
   const handleDeleteMessage = (message: Message) => {
     setMessageToDelete({
@@ -812,7 +907,7 @@ export default function MessagePage() {
                               )}
 
                               <div className="flex items-center space-x-2">
-                                <div className="max-w-[70%]">
+                                <div className="">
                                   <Tooltip
                                     content={`${new Date(
                                       message.createdAt
@@ -832,9 +927,11 @@ export default function MessagePage() {
                                     <div className="relative">
                                       <div
                                         className={`rounded-lg p-3 cursor-pointer ${
-                                          isMyMessage
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-200 text-gray-800"
+                                          message.type === "TEXT"
+                                            ? isMyMessage
+                                              ? "bg-blue-500 text-white"
+                                              : "bg-gray-200 text-gray-800"
+                                            : "p-0 bg-transparent"
                                         }`}
                                       >
                                         {message.replyToMessage && (
@@ -861,13 +958,225 @@ export default function MessagePage() {
                                               }
                                             </div>
                                             <div className="truncate">
-                                              {message.replyToMessage.content}
+                                              {(() => {
+                                                const rt =
+                                                  message.replyToMessage?.type;
+                                                if (rt === "MEDIA") {
+                                                  try {
+                                                    const m = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return m.kind === "VIDEO"
+                                                      ? "[Video]"
+                                                      : "[Hình ảnh]";
+                                                  } catch {
+                                                    return "[Media]";
+                                                  }
+                                                }
+                                                if (rt === "POST") {
+                                                  try {
+                                                    const d = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return d.caption
+                                                      ? d.caption
+                                                      : "[Bài viết]";
+                                                  } catch {
+                                                    return "[Bài viết]";
+                                                  }
+                                                }
+                                                if (rt === "RECIPE") {
+                                                  try {
+                                                    const d = JSON.parse(
+                                                      message.replyToMessage
+                                                        .content
+                                                    );
+                                                    return d.title
+                                                      ? d.title
+                                                      : "[Công thức]";
+                                                  } catch {
+                                                    return "[Công thức]";
+                                                  }
+                                                }
+                                                return message.replyToMessage
+                                                  .content;
+                                              })()}
                                             </div>
                                           </div>
                                         )}
-                                        <p className="text-sm">
-                                          {message.content}
-                                        </p>
+                                        {(() => {
+                                          if (message.type === "TEXT") {
+                                            return (
+                                              <p className="text-sm">
+                                                {message.content}
+                                              </p>
+                                            );
+                                          }
+                                          if (message.type === "MEDIA") {
+                                            try {
+                                              const media = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                url: string;
+                                                kind?: string;
+                                                error?: boolean;
+                                                fileName?: string;
+                                              };
+                                              const kind = (
+                                                media.kind || "IMAGE"
+                                              ).toUpperCase();
+
+                                              if (media.error) {
+                                                return (
+                                                  <div className="relative rounded-lg overflow-hidden max-h-72 border-2 border-red-300">
+                                                    {kind === "VIDEO" ? (
+                                                      <div className="w-64 h-36 bg-red-50 rounded-lg flex items-center justify-center">
+                                                        <Video
+                                                          size={32}
+                                                          className="text-red-400"
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      <img
+                                                        src={media.url}
+                                                        alt="failed"
+                                                        className="rounded-lg max-h-72 object-contain opacity-50"
+                                                      />
+                                                    )}
+                                                    <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                                                      <div className="bg-red-100 rounded-lg p-3 text-center">
+                                                        <p className="text-red-600 text-sm font-medium">
+                                                          Upload thất bại
+                                                        </p>
+                                                        <p className="text-red-500 text-xs">
+                                                          {media.fileName}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+
+                                              if (kind === "VIDEO") {
+                                                return (
+                                                  <video
+                                                    src={media.url}
+                                                    controls
+                                                    className="rounded-lg max-h-72"
+                                                  />
+                                                );
+                                              }
+                                              return (
+                                                <img
+                                                  src={media.url}
+                                                  alt="media"
+                                                  className="rounded-lg max-h-72 object-contain"
+                                                />
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm break-words">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          if (message.type === "POST") {
+                                            try {
+                                              const data = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                id: number;
+                                                caption?: string;
+                                                slug?: string | null;
+                                              };
+                                              return (
+                                                <a
+                                                  href={
+                                                    data.slug
+                                                      ? `/post/${data.slug}`
+                                                      : `/post/${data.id}`
+                                                  }
+                                                  className={`block p-3 rounded-lg border ${
+                                                    isMyMessage
+                                                      ? "bg-blue-400/40 border-blue-200"
+                                                      : "bg-gray-100 border-gray-300"
+                                                  }`}
+                                                >
+                                                  <div className="text-sm font-medium mb-1">
+                                                    Chia sẻ bài viết
+                                                  </div>
+                                                  {data.caption ? (
+                                                    <div className="text-sm line-clamp-2">
+                                                      {data.caption}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-sm italic">
+                                                      Xem bài viết
+                                                    </div>
+                                                  )}
+                                                </a>
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          if (message.type === "RECIPE") {
+                                            try {
+                                              const data = JSON.parse(
+                                                message.content
+                                              ) as {
+                                                id: number;
+                                                title?: string;
+                                                slug?: string | null;
+                                              };
+                                              return (
+                                                <a
+                                                  href={
+                                                    data.slug
+                                                      ? `/recipes/${data.slug}`
+                                                      : `/recipes/${data.id}`
+                                                  }
+                                                  className={`block p-3 rounded-lg border ${
+                                                    isMyMessage
+                                                      ? "bg-blue-400/40 border-blue-200"
+                                                      : "bg-gray-100 border-gray-300"
+                                                  }`}
+                                                >
+                                                  <div className="text-sm font-medium mb-1">
+                                                    Chia sẻ công thức
+                                                  </div>
+                                                  {data.title ? (
+                                                    <div className="text-sm line-clamp-2">
+                                                      {data.title}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="text-sm italic">
+                                                      Xem công thức
+                                                    </div>
+                                                  )}
+                                                </a>
+                                              );
+                                            } catch {
+                                              return (
+                                                <p className="text-sm">
+                                                  {message.content}
+                                                </p>
+                                              );
+                                            }
+                                          }
+                                          return (
+                                            <p className="text-sm">
+                                              {message.content}
+                                            </p>
+                                          );
+                                        })()}
                                       </div>
 
                                       <ReactionSummary
@@ -1012,7 +1321,6 @@ export default function MessagePage() {
                 user={currentUserAsMember}
                 isShowIconPicker={isShowIconPicker}
                 setIsShowIconPicker={setIsShowIconPicker}
-                fileInputRef={fileInputRef}
                 onChange={handleChangeMessage}
                 onSend={handleSendMessage}
                 onTyping={handleTyping}
@@ -1020,6 +1328,7 @@ export default function MessagePage() {
                 onEmojiSelect={(emoji) => {
                   handleChangeMessage(newMessage + emoji);
                 }}
+                onFilesSelected={handleFilesSelected}
               />
             </>
           ) : (
@@ -1033,13 +1342,6 @@ export default function MessagePage() {
           }`}
         ></div>
       </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-      />
 
       <DeleteConfirm
         isOpen={deleteModalOpen}
