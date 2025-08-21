@@ -17,6 +17,7 @@ import Blog1 from "../pages/blog/Blog1";
 import Blog2 from "../pages/blog/Blog2";
 import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
+import AccountPage from "../pages/main/Account/AccountPage";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
 
@@ -37,6 +38,14 @@ export default function AppRouter() {
       <Route path="*" element={<NotFound />} />
       <Route path="/messages" element={<MessagePage />} />
       <Route path="/messages/:conversationId" element={<MessagePage />} />
+      <Route
+        path="/account"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <AccountPage />
+          </MainLayout>
+        }
+      />
       <Route
         path="/profile/:username"
         element={

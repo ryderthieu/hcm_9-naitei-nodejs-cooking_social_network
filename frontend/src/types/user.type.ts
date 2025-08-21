@@ -1,8 +1,14 @@
 export interface UserProfile {
-	firstName: string;
-	lastName: string;
-	bio: string;
-	avatar: string;
+	firstName?: string;
+	lastName?: string;
+	username?: string;
+	email?: string;
+	gender?: "MALE" | "FEMALE";
+	birthday?: string; 
+	bio?: string;
+	avatar?: string;
+	password?: string;
+	confirmPassword?: string;
 }
 
 export interface UserData {

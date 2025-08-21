@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsDateString, IsEnum, MinLength, Matches, Validate } from 'class-validator';
+import { IsOptional, IsString, IsDateString, IsEnum, MinLength, Matches, Validate, IsEmail } from 'class-validator';
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 
 enum Gender {
@@ -19,6 +19,10 @@ export class MatchPasswordConstraint implements ValidatorConstraintInterface {
 }
 
 export class UpdateUserDto {
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+  
   @IsOptional()
   @IsString()
   firstName?: string;
