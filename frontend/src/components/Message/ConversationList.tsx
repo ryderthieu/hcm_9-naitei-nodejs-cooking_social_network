@@ -139,14 +139,22 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       {conversation.lastMessage.type === "TEXT"
                         ? conversation.lastMessage.content
                         : conversation.lastMessage.type === "MEDIA"
-                        ? JSON.parse(conversation.lastMessage.content).kind ===
-                          "IMAGE"
-                          ? "Hình ảnh"
-                          : "Video"
+                        ? ((): string => {
+                            try {
+                              const d = JSON.parse(
+                                conversation.lastMessage.content
+                              );
+                              return d.kind === "IMAGE" ? "Hình ảnh" : "Video";
+                            } catch {
+                              return "Media";
+                            }
+                          })()
                         : conversation.lastMessage.type === "POST"
                         ? "Bài viết"
                         : conversation.lastMessage.type === "RECIPE"
                         ? "Công thức"
+                        : conversation.lastMessage.type === "SYSTEM"
+                        ? conversation.lastMessage.content
                         : "Chưa có tin nhắn"}
                     </p>
                     {conversation.unreadCount > 0 && (

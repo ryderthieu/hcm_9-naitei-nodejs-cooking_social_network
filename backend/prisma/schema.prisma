@@ -96,6 +96,7 @@ enum MessageType {
   POST
   TEXT
   RECIPE
+  SYSTEM
 }
 
 model User {
