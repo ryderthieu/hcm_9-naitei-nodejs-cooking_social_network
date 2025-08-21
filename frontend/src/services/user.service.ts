@@ -1,5 +1,5 @@
 import { get, post, del, put } from "./api.service";
-import type { UserProfile } from "../types/user.type";
+import type { UserData, UserProfile } from "../types/user.type";
 
 export async function getCurrentUser() {
   try {
@@ -59,7 +59,7 @@ export async function toggleFollow(username: string) {
 
 export async function updateUserProfile(formData: UserProfile) {
   try {
-    const response = await put("/users/profile", formData);
+    const response = await put("/users/me", formData);
     return response.data.user;
   } catch (error) {
     throw error;
@@ -68,7 +68,9 @@ export async function updateUserProfile(formData: UserProfile) {
 
 export async function searchUsers(query: string) {
   try {
-    const response = await get(`/users?name=${encodeURIComponent(query)}&limit=10`);
+    const response = await get(
+      `/users?name=${encodeURIComponent(query)}&limit=10`
+    );
     return response.data.users;
   } catch (error) {
     throw error;
@@ -79,6 +81,33 @@ export async function getUserById(userId: number) {
   try {
     const response = await get(`/users/${userId}`);
     return response.data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getFollowers(username: string): Promise<UserData[]> {
+  try {
+    const response = await get(`/users/${username}/followers`);
+    return response.data.users;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function isFollowing(username: string): Promise<boolean> {
+  try {
+    const response = await get(`/users/${username}/follow-status`);
+    return response.data.isFollowing;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getFollowings(username: string) {
+  try {
+    const response = await get(`/users/${username}/followings`);
+    return response.data.users;
   } catch (error) {
     throw error;
   }

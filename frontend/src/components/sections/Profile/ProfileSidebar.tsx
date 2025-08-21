@@ -1,5 +1,10 @@
 import React from "react";
-import { User, BookOpen, ChefHat, Bookmark } from "lucide-react";
+import { UserCheck } from "lucide-react";
+import {
+  FaUser,
+  FaUtensils,
+  FaBookmark,
+} from "react-icons/fa";
 
 interface ProfileSidebarProps {
   activeTab: string;
@@ -30,13 +35,13 @@ export default function ProfileSidebar({
     {
       id: "posts",
       label: "Bài viết",
-      icon: <BookOpen className="w-5 h-5" />,
+      icon: <FaUser className="w-5 h-5" />,
       count: stats?.posts?.count || 0,
     },
     {
       id: "recipes",
       label: "Công thức",
-      icon: <ChefHat className="w-5 h-5" />,
+      icon: <FaUtensils className="w-5 h-5" />,
       count: stats?.recipes?.count || 0,
     },
   ];
@@ -45,7 +50,7 @@ export default function ProfileSidebar({
     tabs.push({
       id: "saved",
       label: "Đã lưu",
-      icon: <Bookmark className="w-5 h-5" />,
+      icon: <FaBookmark className="w-5 h-5" />,
       count: stats?.saved?.count || 0,
     });
   }
@@ -77,7 +82,13 @@ export default function ProfileSidebar({
               </span>
               <span className="font-medium">{tab.label}</span>
             </div>
-            <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+            <span
+              className={`text-sm px-2 py-1 rounded-full border ${
+                activeTab === tab.id
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-white text-gray-600 border-gray-200"
+              }`}
+            >
               {tab.count}
             </span>
           </button>
@@ -94,7 +105,7 @@ export default function ProfileSidebar({
                 : "bg-amber-500 text-white border-amber-500 hover:bg-amber-600"
             }`}
           >
-            <User className="w-4 h-4" />
+            <UserCheck className="w-4 h-4" />
             <span className="font-medium">
               {isFollowing ? "Đang theo dõi" : "Theo dõi"}
             </span>
@@ -102,14 +113,17 @@ export default function ProfileSidebar({
         </div>
       )}
 
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Giới thiệu</h3>
-        <div className="space-y-2">
-          {user?.bio && (
-            <p className="text-sm text-gray-600 leading-relaxed">{user.bio}</p>
-          )}
+      {userData?.bio && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+          <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            <span className="text-amber-500">✨</span>
+            Giới thiệu
+          </h4>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {userData.bio}
+          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

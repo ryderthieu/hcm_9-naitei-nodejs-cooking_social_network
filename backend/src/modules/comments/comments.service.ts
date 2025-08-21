@@ -18,7 +18,7 @@ import {
 import { PostComment, User } from '@prisma/client';
 
 type PostCommentWithUser = PostComment & {
-  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar'>;
+  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar' | 'username'>;
 };
 
 @Injectable()
@@ -53,7 +53,7 @@ export class CommentsService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true },
+          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
         },
       },
     });
@@ -95,7 +95,7 @@ export class CommentsService {
       data: { comment: updateCommentDto.comment },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true },
+          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
         },
       },
     });
@@ -159,7 +159,7 @@ export class CommentsService {
       where: { id: commentId },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true },
+          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
         },
       },
     });
@@ -189,7 +189,7 @@ export class CommentsService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+            select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
           },
         },
       }),
@@ -231,7 +231,7 @@ export class CommentsService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatar: true },
+            select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
           },
         },
       }),
@@ -312,9 +312,10 @@ export class CommentsService {
       likes_count: comment.likesCount,
       user: {
         id: comment.user.id,
-        first_name: comment.user.firstName,
-        last_name: comment.user.lastName,
+        firstName: comment.user.firstName,
+        lastName: comment.user.lastName,
         avatar: comment.user.avatar,
+        username: comment.user.username,
       },
       comment: comment.comment,
       created_at: comment.createdAt,

@@ -1,8 +1,8 @@
 import { FaFacebookF, FaTwitter, FaInstagram } from "react-icons/fa";
-import bt1 from "../../assets/Blog/bt1.jpg";
-import bt2 from "../../assets/Blog/bt2.jpg";
-import bt3 from "../../assets/Blog/bt3.jpg";
-import botoi from "../../assets/Blog/botoi.jpg";
+import bt1 from "../../assets/blog/bt1.jpg";
+import bt2 from "../../assets/blog/bt2.jpg";
+import bt3 from "../../assets/blog/bt3.jpg";
+import botoi from "../../assets/blog/botoi.jpg";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 const Blog2 = () => {

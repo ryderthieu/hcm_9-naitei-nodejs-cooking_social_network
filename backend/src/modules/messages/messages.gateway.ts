@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ToggleReactionDto } from './dto/toggle-reaction.dto';
 import { JWT_SECRET } from 'src/common/constants/jwt.constant';
 
 @WebSocketGateway({
@@ -120,7 +121,8 @@ export class MessagesGateway
     this.server.to(`conversation_${data.conversationId}`).emit('message_seen', {
       conversationId: data.conversationId,
       userId: client.data.userId,
-      seenMessages,
+      user: seenMessages.user,
+      messages: seenMessages.messages,
     });
   }
 
@@ -134,5 +136,24 @@ export class MessagesGateway
       isTyping: data.isTyping,
       conversationId: data.conversationId,
     });
+  }
+
+  @SubscribeMessage('toggle_reaction')
+  async handleToggleReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: ToggleReactionDto,
+  ) {
+    const result = await this.messagesService.toggleReaction(
+      data.messageId,
+      client.data.userId,
+      data.reaction,
+    );
+
+    this.server
+      .to(`conversation_${data.conversationId}`)
+      .emit('message_reaction', {
+        result,
+      });
   }
 }

@@ -80,6 +80,19 @@ export class MessagesService {
             },
           },
         },
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -189,14 +202,21 @@ export class MessagesService {
       },
     });
 
-    const seenMessages = await this.prisma.seen.createMany({
+    await this.prisma.seen.createMany({
       data: unreadMessages.map((message) => ({
         messageId: message.id,
         userId,
       })),
     });
 
-    return seenMessages;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    return {
+      user,
+      messages: unreadMessages,
+    };
   }
 
   async deleteMessage(messageId: number) {
@@ -205,5 +225,86 @@ export class MessagesService {
     });
 
     return deletedMessage;
+  }
+
+  async toggleReaction(messageId: number, userId: number, reaction: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new Error('Message not found');
+    }
+
+    const persistedReaction = await this.prisma.messageReaction.findUnique({
+      where: {
+        messageId_userId: {
+          messageId,
+          userId,
+        },
+      },
+    });
+
+    let action: string = '';
+
+    if (!persistedReaction) {
+      await this.prisma.messageReaction.create({
+        data: {
+          messageId,
+          userId,
+          emoji: reaction,
+        },
+      });
+      action = 'add_reaction';
+    } else {
+      if (persistedReaction.emoji === reaction) {
+        await this.prisma.messageReaction.delete({
+          where: {
+            messageId_userId: {
+              messageId,
+              userId,
+            },
+          },
+        });
+        action = 'remove_reaction';
+      } else {
+        await this.prisma.messageReaction.update({
+          where: {
+            messageId_userId: {
+              messageId,
+              userId,
+            },
+          },
+          data: {
+            emoji: reaction,
+          },
+        });
+        action = 'update_reaction';
+      }
+    }
+
+    const updatedMessage = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      action,
+      message: updatedMessage,
+    };
   }
 }
