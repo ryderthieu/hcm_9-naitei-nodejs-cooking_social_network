@@ -136,27 +136,25 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-sm text-gray-600 truncate flex-1">
-                      {conversation.lastMessage
-                        ? conversation.lastMessage.type === "TEXT"
-                          ? conversation.lastMessage.content
-                          : conversation.lastMessage.type === "MEDIA"
-                          ? (() => {
-                              try {
-                                const mediaContent = JSON.parse(
-                                  conversation.lastMessage.content
-                                );
-                                return mediaContent.kind === "IMAGE"
-                                  ? "Hình ảnh"
-                                  : "Video";
-                              } catch (e) {
-                                return "Media";
-                              }
-                            })()
-                          : conversation.lastMessage.type === "POST"
-                          ? "Bài viết"
-                          : conversation.lastMessage.type === "RECIPE"
-                          ? "Công thức"
-                          : "Tin nhắn"
+                      {conversation.lastMessage.type === "TEXT"
+                        ? conversation.lastMessage.content
+                        : conversation.lastMessage.type === "MEDIA"
+                        ? ((): string => {
+                            try {
+                              const d = JSON.parse(
+                                conversation.lastMessage.content
+                              );
+                              return d.kind === "IMAGE" ? "Hình ảnh" : "Video";
+                            } catch {
+                              return "Media";
+                            }
+                          })()
+                        : conversation.lastMessage.type === "POST"
+                        ? "Bài viết"
+                        : conversation.lastMessage.type === "RECIPE"
+                        ? "Công thức"
+                        : conversation.lastMessage.type === "SYSTEM"
+                        ? conversation.lastMessage.content
                         : "Chưa có tin nhắn"}
                     </p>
                     {conversation.unreadCount > 0 && (

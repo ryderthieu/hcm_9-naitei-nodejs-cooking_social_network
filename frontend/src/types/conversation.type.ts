@@ -30,7 +30,7 @@ export interface MessageReaction {
   };
 }
 
-export type MessageType = "TEXT" | "MEDIA" | "POST" | "RECIPE";
+export type MessageType = "TEXT" | "MEDIA" | "POST" | "RECIPE" | "SYSTEM";
 
 export interface Message {
   id: number;
