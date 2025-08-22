@@ -144,6 +144,14 @@ export class UsersService {
     user: User,
     updateUserDto: UpdateUserDto,
   ): Promise<SingleUserResponseDto> {
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existed = await this.prisma.user.findFirst({
+        where: { email: updateUserDto.email, NOT: { id: user.id } },
+      });
+      if (existed) {
+        throw new ConflictException('Email already exists');
+      }
+    }
     if (updateUserDto.password) {
       if (!updateUserDto.confirmPassword) {
         throw new BadRequestException(
