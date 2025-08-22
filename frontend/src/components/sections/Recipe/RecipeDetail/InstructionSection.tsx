@@ -87,7 +87,7 @@ export default function InstructionsSection({
                         <img
                           src={image}
                           alt={`Bước ${index + 1} - Hình ${imgIndex + 1}`}
-                          className="w-full h-100 object-cover hover:scale-105 transition-transform duration-300"
+                          className="w-full h-[100px] object-cover hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     ))}

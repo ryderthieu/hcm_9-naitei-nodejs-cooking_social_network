@@ -42,7 +42,6 @@ type Ingredient = {
 
 export const calculateNutrition = (ingredients: Ingredient[]) => {
   if (!ingredients || ingredients.length === 0) {
-    console.log("No ingredients provided for nutrition calculation");
     return {
       calories: 0,
       protein: 0,

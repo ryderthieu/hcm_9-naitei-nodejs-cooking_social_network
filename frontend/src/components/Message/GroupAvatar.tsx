@@ -1,4 +1,5 @@
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
+import { useAuth } from "../../contexts/AuthContext";
 import type { Member } from "../../types/conversation.type";
 
 interface GroupAvatarProps {
@@ -12,6 +13,8 @@ export const GroupAvatar = ({
   maxCount = 3,
   size = "default",
 }: GroupAvatarProps) => {
+  const { user } = useAuth();
+  const otherMembers = members.filter((member) => member.id !== user?.id);
   const getSize = () => {
     if (typeof size === "number") return size;
     switch (size) {
@@ -27,7 +30,7 @@ export const GroupAvatar = ({
   const avatarSize = getSize();
   const containerSize = avatarSize;
 
-  if (members.length === 0) {
+  if (otherMembers.length === 0) {
     return (
       <div
         className="rounded-full bg-gray-200 flex items-center justify-center overflow-hidden"
@@ -42,25 +45,24 @@ export const GroupAvatar = ({
     );
   }
 
-  if (members.length === 1) {
+  if (otherMembers.length === 1) {
     return (
       <div
         className="rounded-full overflow-hidden"
         style={{ width: containerSize, height: containerSize }}
       >
         <img
-          src={members[0].avatar || DEFAULT_AVATAR_URL}
-          alt={`${members[0].firstName} ${members[0].lastName}`}
+          src={otherMembers[0].avatar || DEFAULT_AVATAR_URL}
+          alt={`${otherMembers[0].firstName} ${otherMembers[0].lastName}`}
           className="w-full h-full object-cover"
         />
       </div>
     );
   }
 
-  const displayMembers = members.slice(0, maxCount);
-  const remainingCount = members.length - maxCount;
+  const remainingCount = otherMembers.length - maxCount;
 
-  if (members.length === 2) {
+  if (otherMembers.length === 2) {
     const smallSize = avatarSize * 0.7;
 
     return (
@@ -77,8 +79,8 @@ export const GroupAvatar = ({
           }}
         >
           <img
-            src={members[0].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[0].firstName} ${members[0].lastName}`}
+            src={otherMembers[0].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[0].firstName} ${otherMembers[0].lastName}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -92,8 +94,8 @@ export const GroupAvatar = ({
           }}
         >
           <img
-            src={members[1].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[1].firstName} ${members[1].lastName}`}
+            src={otherMembers[1].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[1].firstName} ${otherMembers[1].lastName}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -101,7 +103,7 @@ export const GroupAvatar = ({
     );
   }
 
-  if (members.length === 3) {
+  if (otherMembers.length === 3) {
     const smallSize = avatarSize * 0.6;
 
     return (
@@ -118,8 +120,8 @@ export const GroupAvatar = ({
           }}
         >
           <img
-            src={members[0].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[0].firstName} ${members[0].lastName}`}
+            src={otherMembers[0].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[0].firstName} ${otherMembers[0].lastName}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -133,8 +135,8 @@ export const GroupAvatar = ({
           }}
         >
           <img
-            src={members[1].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[1].firstName} ${members[1].lastName}`}
+            src={otherMembers[1].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[1].firstName} ${otherMembers[1].lastName}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -148,8 +150,8 @@ export const GroupAvatar = ({
           }}
         >
           <img
-            src={members[2].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[2].firstName} ${members[2].lastName}`}
+            src={otherMembers[2].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[2].firstName} ${otherMembers[2].lastName}`}
             className="w-full h-full object-cover"
           />
         </div>
@@ -169,8 +171,8 @@ export const GroupAvatar = ({
         style={{ width: smallSize, height: smallSize }}
       >
         <img
-          src={members[0].avatar || DEFAULT_AVATAR_URL}
-          alt={`${members[0].firstName} ${members[0].lastName}`}
+          src={otherMembers[0].avatar || DEFAULT_AVATAR_URL}
+          alt={`${otherMembers[0].firstName} ${otherMembers[0].lastName}`}
           className="w-full h-full object-cover"
         />
       </div>
@@ -180,8 +182,8 @@ export const GroupAvatar = ({
         style={{ width: smallSize, height: smallSize }}
       >
         <img
-          src={members[1].avatar || DEFAULT_AVATAR_URL}
-          alt={`${members[1].firstName} ${members[1].lastName}`}
+          src={otherMembers[1].avatar || DEFAULT_AVATAR_URL}
+          alt={`${otherMembers[1].firstName} ${otherMembers[1].lastName}`}
           className="w-full h-full object-cover"
         />
       </div>
@@ -191,8 +193,8 @@ export const GroupAvatar = ({
         style={{ width: smallSize, height: smallSize }}
       >
         <img
-          src={members[2].avatar || DEFAULT_AVATAR_URL}
-          alt={`${members[2].firstName} ${members[2].lastName}`}
+          src={otherMembers[2].avatar || DEFAULT_AVATAR_URL}
+          alt={`${otherMembers[2].firstName} ${otherMembers[2].lastName}`}
           className="w-full h-full object-cover"
         />
       </div>
@@ -201,14 +203,14 @@ export const GroupAvatar = ({
         className="rounded-full overflow-hidden border border-white flex items-center justify-center"
         style={{ width: smallSize, height: smallSize }}
       >
-        {members.length > maxCount ? (
+        {otherMembers.length > maxCount ? (
           <div className="bg-gray-500 text-white text-xs font-semibold w-full h-full flex items-center justify-center">
             +{remainingCount}
           </div>
-        ) : members[3] ? (
+        ) : otherMembers[3] ? (
           <img
-            src={members[3].avatar || DEFAULT_AVATAR_URL}
-            alt={`${members[3].firstName} ${members[3].lastName}`}
+            src={otherMembers[3].avatar || DEFAULT_AVATAR_URL}
+            alt={`${otherMembers[3].firstName} ${otherMembers[3].lastName}`}
             className="w-full h-full object-cover"
           />
         ) : null}

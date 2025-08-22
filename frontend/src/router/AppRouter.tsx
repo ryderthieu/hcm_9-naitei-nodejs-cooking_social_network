@@ -28,13 +28,13 @@ export default function AppRouter() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <Feed />
           </MainLayout>
-        } 
+        }
       />
       <Route path="*" element={<NotFound />} />
       <Route path="/messages" element={<MessagePage />} />
