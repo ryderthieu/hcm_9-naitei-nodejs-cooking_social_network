@@ -224,7 +224,7 @@ export default function Post({
                 <span
                   className="text-yellow-500 font-medium hover:underline cursor-pointer"
                   onClick={() =>
-                    navigate(`/recipe/${data.recipe.slug || data.recipe.id}`)
+                    navigate(`/detail-recipe/${data.recipe.id}`)
                   }
                 >
                   @{data.recipe.title}

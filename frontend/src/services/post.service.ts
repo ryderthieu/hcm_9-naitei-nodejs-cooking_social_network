@@ -5,6 +5,7 @@ import type {
   PostsResponse,
   UpdatePostDto,
   PostEntity,
+  CreatePostDto,
 } from "../types/post.type";
 
 function buildQuery(params?: Record<string, any>) {
@@ -48,6 +49,11 @@ export async function getSavedPosts(username: string) {
   } catch (error) {
     throw error;
   }
+}
+
+export async function createPost(createPostDto: CreatePostDto) {
+  const res = await post<PostResponse>('/posts', { post: createPostDto });
+  return res.data;
 }
 
 export async function updatePost(postId: number, dto: UpdatePostDto) {
