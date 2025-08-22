@@ -531,6 +531,15 @@ export class ConversationsService {
       );
     }
 
+    if (conversation.members.length === PRIVATE_CHAT_MEMBERS) {
+      return await this.createConversation(userId, {
+        members: [
+          ...conversation.members.map((member) => member.userId),
+          ...memberIds,
+        ],
+      });
+    }
+
     await this.prisma.member.createMany({
       data: newMemberIds.map((memberId) => ({
         conversationId,
