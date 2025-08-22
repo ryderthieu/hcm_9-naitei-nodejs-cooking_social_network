@@ -21,6 +21,7 @@ import AccountPage from "../pages/main/Account/AccountPage";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
 import DetailRecipe from "../pages/recipe/DetailRecipe";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
+import DetailRecipe from "../pages/recipe/DetailRecipe";
 
 export default function AppRouter() {
   return (
@@ -145,7 +146,7 @@ export default function AppRouter() {
       />
 
       <Route
-        path="/detail-recipe"
+        path="/detail-recipe/:id"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <DetailRecipe />

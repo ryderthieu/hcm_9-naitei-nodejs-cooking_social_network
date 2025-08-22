@@ -121,7 +121,7 @@ export const recipesService = {
   async findUserReviewForRecipe(recipeId: number) {
     try {
       const response = await get(`/recipes/${recipeId}/rating/me`);
-      return response.data; // có thể null nếu chưa có review
+      return response.data;
     } catch (error) {
       throw error;
     }
