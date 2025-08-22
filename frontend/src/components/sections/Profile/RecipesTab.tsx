@@ -33,7 +33,7 @@ export default function RecipesTab({ username }: RecipesTabProps) {
   }, [username]);
 
   const handleRecipeClick = (recipe: RecipeListItem) => {
-    navigate(`/recipe/${recipe.slug || recipe.id}`);
+    navigate(`/detail-recipe/${recipe.id}`);
   };
 
   if (loading) {

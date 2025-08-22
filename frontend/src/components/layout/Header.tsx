@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import logo from "../../assets/logo.svg";
+import avatarDefault from "../../assets/avatar-default.svg";
 import { FaAngleDown, FaChevronDown, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { categories } from "../layout/MenuData";
@@ -7,6 +8,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import NotificationDropdown from "../sections/NotificationDropdown";
 import MessageDropdown from "../sections/MessageDropdown";
 import { Bookmark } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 
 type CategoryItem = {
   name: string;
@@ -36,6 +38,7 @@ const Header = () => {
   const searchRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const path = location.pathname;
@@ -95,7 +98,7 @@ const Header = () => {
               <div className="w-[20%] p-4 ml-[110px]">
                 <ul className="text-gray-700 font-medium text-[17px] leading-[1.4]">
                   {categories.map((category, index) => (
-                    <li key={category.items} className="pb-4 cursor-pointer">
+                    <li key={index} className="pb-4 cursor-pointer">
                       <div
                         className={`transition-colors duration-200 ${
                           index === selectedCategoryIndex
@@ -281,8 +284,9 @@ const Header = () => {
           >
             <div className="flex items-center gap-4">
               <img
-                src={"https://randomuser.me/api/portraits/men/32.jpg"}
+                src={user?.avatar || avatarDefault}
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#FFB800]"
+                alt="User avatar"
               />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-[20px] h-[20px] bg-[#E2E5E9] rounded-full flex items-center justify-center text-[12px]">
@@ -297,11 +301,20 @@ const Header = () => {
           {isDropdownOpen && (
             <div className="absolute top-[80px] right-[100px] bg-white rounded-b-lg w-[200px] shadow-2xl z-10 overflow-hidden">
               <div className="p-4">
-                <a className="block text-[#04043F] font-medium text-[16px] py-2 px-4 rounded-lg hover:bg-[#f9f9f9] hover:text-[#FF6363] transition-all duration-200">
+                <a 
+                  onClick={() => {
+                    navigate(`/profile/${user?.username}`);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="block text-[#04043F] font-medium text-[16px] py-2 px-4 rounded-lg cursor-pointer hover:bg-[#f9f9f9] hover:text-[#FF6363] transition-all duration-200"
+                >
                   Trang cá nhân
                 </a>
                 <div
-                  onClick={() => navigate("/account")}
+                  onClick={() => {
+                    navigate("/account");
+                    setIsDropdownOpen(false);
+                  }}
                   className="block text-[#04043F] font-medium text-[16px] py-2 px-4 rounded-lg cursor-pointer hover:bg-[#f9f9f9] hover:text-[#FF6363] transition-all duration-200"
                 >
                   Tài khoản
@@ -309,6 +322,7 @@ const Header = () => {
                 <div className="border-t-[1px] border-[#FBDCB0] my-2"></div>
                 <p
                   onClick={() => {
+                    logout();
                     navigate("/login");
                     setIsDropdownOpen(false);
                   }}
