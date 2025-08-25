@@ -16,6 +16,7 @@ import {
   SeenByAvatars,
   InfoSidebar,
   ConversationEditModal,
+  CreateConversation,
 } from "../../../components/Message";
 import type {
   Conversation,
@@ -30,11 +31,14 @@ import {
   getConversations,
   getConversation,
   updateConversation,
+  removeMemberFromConversation,
+  addMemberToConversation,
 } from "../../../services/conversation.service";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getMessages } from "../../../services/message.service";
 import { DeleteConfirm } from "../../../components/popup";
 import { uploadFiles } from "../../../services/upload.service";
+import { Members } from "../../../components/Message/Members";
 
 const convertUserToMember = (user: User): Member => ({
   id: user.id,
@@ -83,6 +87,10 @@ export default function MessagePage() {
     Record<number, number[]>
   >({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [createConversationModalOpen, setCreateConversationModalOpen] =
+    useState(false);
+  const [leaveConversationModalOpen, setLeaveConversationModalOpen] =
+    useState(false);
   const [messageToDelete, setMessageToDelete] = useState<{
     id: number;
     conversationId: number;
@@ -101,11 +109,9 @@ export default function MessagePage() {
   const isProgrammaticScrollRef = useRef<boolean>(false);
   const [showEditConversationModal, setShowEditConversationModal] =
     useState(false);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showMediaModal, setShowMediaModal] = useState(false);
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<
+    "members" | "search" | "media" | "link" | null
+  >(null);
   const { user, loading: isAuthLoading } = useAuth();
 
   const currentUserAsMember: Member | null = user
@@ -250,6 +256,69 @@ export default function MessagePage() {
 
   const { conversationId } = useParams<{ conversationId: string }>();
 
+  const handleRemoveMember = async (member: Member) => {
+    try {
+      await removeMemberFromConversation(
+        Number(selectedConversationId),
+        member.id
+      );
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(selectedConversationId),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã xóa thành viên ${member.firstName} ${member.lastName} khỏi cuộc trò chuyện.`,
+      });
+    } catch (error) {
+      setError("Lỗi khi xóa thành viên");
+    }
+  };
+
+  const handleCreateConversation = async (conversation: Conversation) => {
+    socketRef.current?.emit("send_message", {
+      conversationId: Number(conversation.id),
+      type: "SYSTEM" as MessageType,
+      content: `${user?.firstName} ${user?.lastName} đã tạo cuộc trò chuyện.`,
+    });
+    setCreateConversationModalOpen(false);
+  };
+
+  const handleAddMember = async (member: Member) => {
+    try {
+      const res = await addMemberToConversation(
+        Number(selectedConversationId),
+        member.id
+      );
+
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(res.conversation.id),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã thêm thành viên ${member.firstName} ${member.lastName} vào cuộc trò chuyện.`,
+      });
+    } catch (error) {
+      setError("Lỗi khi thêm thành viên");
+    }
+  };
+  const handleLeaveConversation = async () => {
+    try {
+      socketRef.current?.emit("send_message", {
+        conversationId: Number(selectedConversationId),
+        type: "SYSTEM" as MessageType,
+        content: `${user?.firstName} ${user?.lastName} đã rời khỏi cuộc trò chuyện.`,
+      });
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== Number(selectedConversationId))
+      );
+      await removeMemberFromConversation(
+        Number(selectedConversationId),
+        currentUserAsMember?.id || 0
+      );
+
+      navigate("/messages");
+    } catch (error) {
+      setError("Lỗi khi rời khỏi cuộc trò chuyện");
+    } finally {
+      setLeaveConversationModalOpen(false);
+    }
+  };
   useEffect(() => {
     if (conversationId) {
       setSelectedConversationId(conversationId);
@@ -485,6 +554,7 @@ export default function MessagePage() {
     socket.on(
       "conversation_update",
       ({ conversationId }: { conversationId: number }) => {
+        console.log("conversation_update", conversationId);
         if (conversationUpdateTimeoutRef.current[conversationId]) {
           clearTimeout(conversationUpdateTimeoutRef.current[conversationId]);
         }
@@ -493,13 +563,20 @@ export default function MessagePage() {
           async () => {
             try {
               const updatedConversation = await getConversation(conversationId);
-
+              console.log("updatedConversation", updatedConversation);
               if (updatedConversation) {
                 setConversations((prev) => {
-                  const idx = prev.findIndex((c) => c.id === conversationId);
-                  if (idx === -1) return prev;
-
                   const updated = [...prev];
+
+                  const idx = prev.findIndex((c) => c.id === conversationId);
+                  if (idx === -1) {
+                    console.log("updatedConversation", updatedConversation);
+                    if (updatedConversation.lastMessage) {
+                      return [updatedConversation, ...updated];
+                    } else {
+                      return [...updated, updatedConversation];
+                    }
+                  }
 
                   updated[idx] = updatedConversation;
 
@@ -837,6 +914,7 @@ export default function MessagePage() {
         user={currentUserAsMember}
         onConversationSelect={handleConversationSelect}
         onlineUserIds={onlineUserIds}
+        onAddConversation={() => setCreateConversationModalOpen(true)}
       />
 
       <div className="flex-1 flex h-full">
@@ -1406,29 +1484,39 @@ export default function MessagePage() {
             showInfoSidebar ? "w-[30%]" : "w-0 opacity-0 overflow-hidden"
           }`}
         >
-          {selectedConversation && (
-            <InfoSidebar
-              conversation={selectedConversation}
-              onEditConversation={() => {
-                setShowEditConversationModal(true);
-              }}
-              onClickMembers={() => {
-                setShowMembersModal(true);
-              }}
-              onClickSearch={() => {
-                setShowSearchModal(true);
-              }}
-              onClickMedia={() => {
-                setShowMediaModal(true);
-              }}
-              onClickLink={() => {
-                setShowLinkModal(true);
-              }}
-              onClickLeave={() => {
-                setShowLeaveModal(true);
-              }}
-            />
-          )}
+          {selectedConversation &&
+            (sidebarTab === "members" ? (
+              <Members
+                members={selectedConversation.members}
+                onRemoveMember={handleRemoveMember}
+                onAddMember={handleAddMember}
+                onBack={() => {
+                  setSidebarTab(null);
+                }}
+              />
+            ) : (
+              <InfoSidebar
+                conversation={selectedConversation}
+                onEditConversation={() => {
+                  setShowEditConversationModal(true);
+                }}
+                onClickMembers={() => {
+                  setSidebarTab("members");
+                }}
+                onClickSearch={() => {
+                  setSidebarTab("search");
+                }}
+                onClickMedia={() => {
+                  setSidebarTab("media");
+                }}
+                onClickLink={() => {
+                  setSidebarTab("link");
+                }}
+                onClickLeave={() => {
+                  setLeaveConversationModalOpen(true);
+                }}
+              />
+            ))}
         </div>
       </div>
 
@@ -1443,6 +1531,15 @@ export default function MessagePage() {
       />
 
       <DeleteConfirm
+        isOpen={leaveConversationModalOpen}
+        onClose={() => {
+          setLeaveConversationModalOpen(false);
+        }}
+        onConfirm={handleLeaveConversation}
+        type="leave_conversation"
+      />
+
+      <DeleteConfirm
         isOpen={deleteModalOpen}
         onClose={() => {
           setDeleteModalOpen(false);
@@ -1450,6 +1547,14 @@ export default function MessagePage() {
         }}
         onConfirm={confirmDeleteMessage}
         type="message"
+      />
+
+      <CreateConversation
+        isOpen={createConversationModalOpen}
+        onClose={() => {
+          setCreateConversationModalOpen(false);
+        }}
+        onCreated={handleCreateConversation}
       />
     </div>
   );

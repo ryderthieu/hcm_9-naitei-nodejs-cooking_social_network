@@ -60,11 +60,9 @@ export class MessagesGateway
   }
 
   private conversationUpdate(conversationId: number) {
-    this.server
-      .to(`conversation_${conversationId}`)
-      .emit('conversation_update', {
-        conversationId,
-      });
+    this.server.emit('conversation_update', {
+      conversationId,
+    });
   }
 
   @SubscribeMessage('get_online_users')
