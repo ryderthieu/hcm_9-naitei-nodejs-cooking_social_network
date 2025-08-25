@@ -436,7 +436,7 @@ export class RecipesService {
       : false;
 
     return {
-      recipe: recipe,
+      ...recipe,
       isSavedByCurrentUser,
     };
   }

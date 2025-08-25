@@ -463,6 +463,8 @@ export default function MessagePage() {
               messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
             }
           }, 0);
+        } else {
+          setHasNewMessage(true);
         }
       }
 
@@ -669,6 +671,7 @@ export default function MessagePage() {
     socketRef.current.emit("send_message", payload);
     setNewMessage("");
     setReplyingTo(null);
+
     handleTyping(false);
 
     setTimeout(() => {
@@ -1050,6 +1053,7 @@ export default function MessagePage() {
                               )}
 
                               <div className="flex items-center space-x-2">
+
                                 <div className="">
                                   <Tooltip
                                     content={`${new Date(

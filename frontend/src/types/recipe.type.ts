@@ -67,6 +67,24 @@ export interface QueryRecipesDto {
   page?: number;
 }
 
+export interface RecipeDto {
+  id: number;
+  title: string;
+  description: string;
+  ingredients: IngredientDto[];
+  steps: StepDto[];
+  images: ImageDto[];
+  utensils: UtensilDto[];
+  categories: CategoryDto;
+  timeBased: string;
+  author: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    avatar?: string;
+  };
+}
+
 export interface RatingDto {
   id: number;
   recipeId: number;

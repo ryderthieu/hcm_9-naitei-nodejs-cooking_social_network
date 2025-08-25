@@ -24,6 +24,18 @@ export const recipesService = {
     }
   },
 
+  async getRandomRecipes(query?: QueryRecipesDto) {
+    try {
+      const response = await get(
+        "/recipes",
+        query ? { params: query } : undefined
+      );
+      return response.data.slice(0, 6);
+    } catch (error) {
+      throw error;
+    }
+  },
+
   async getRecipesByUser(username: string) {
     try {
       const response = await get("/recipes", { params: { username } });
