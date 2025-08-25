@@ -133,3 +133,18 @@ export type FormStep = {
   time: string;
   images: string[];
 };
+export interface SavedByUsersDto {
+  createdAt: Date;
+  userId: number;
+  recipeId: number;
+}
+
+export interface Recipe {
+  id: number;
+  authorId: number;
+  title: string;
+  images: ImageDto[];
+  savedByUsers: SavedByUsersDto[];
+  createdAt: Date;
+  categories?: CategoryDto;
+}

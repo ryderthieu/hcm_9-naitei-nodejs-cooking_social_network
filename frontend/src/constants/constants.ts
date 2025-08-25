@@ -58,3 +58,6 @@ export const API_ERROR_MESSAGES = {
 
 export const DEFAULT_AVATAR_URL =
   "https://res.cloudinary.com/dfaq5hbmx/image/upload/v1749033098/general/bseoimm2ya0utf2duyyu.png";
+
+export const DEFAULT_RECIPE_URL =
+  "https://cdn.loveandlemons.com/wp-content/uploads/2024/07/ratatouille.jpg"
