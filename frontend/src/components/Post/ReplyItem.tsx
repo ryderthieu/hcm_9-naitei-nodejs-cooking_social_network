@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import UserHeader from "../common/user/UserHeader";
 import CommentInput from "../common/forms/CommentInput";
-import { timeAgoVi, showErrorAlert } from "../../utils/utils";
+import { timeAgoVi } from "../../utils/utils";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import HeartIcon from "./icons/HeartIcon";
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
 import { FaReply } from "react-icons/fa";
@@ -64,6 +65,7 @@ export default function ReplyItem({
   currentUser
 }: ReplyItemProps) {
   const navigate = useNavigate();
+  const { showError } = useAlertPopup();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -104,7 +106,7 @@ export default function ReplyItem({
       await onEdit(val);
       setIsEditing(false);
     } catch (error) {
-      showErrorAlert(error, "Thao tác đã thất bại. Vui lòng thử lại!");
+      showError("Thao tác đã thất bại. Vui lòng thử lại!");
     } finally {
       setSavingEdit(false);
     }
@@ -123,7 +125,7 @@ export default function ReplyItem({
         await onLoadReplies();
       }
     } catch (error) {
-      showErrorAlert(error, "Thao tác đã thất bại. Vui lòng thử lại!");
+      showError("Thao tác đã thất bại. Vui lòng thử lại!");
     } finally {
       setPostingReply(false);
     }
@@ -142,7 +144,7 @@ export default function ReplyItem({
           await onLoadReplies();
         }
       } catch (error) {
-        showErrorAlert(error, "Không thể gửi phản hồi. Vui lòng thử lại!");
+        showError("Không thể gửi phản hồi. Vui lòng thử lại!");
       }
     }
   };
@@ -152,7 +154,7 @@ export default function ReplyItem({
       try {
         await onLikeReply(replyId);
       } catch (error) {
-        showErrorAlert(error, "Không thể thích phản hồi. Vui lòng thử lại!");
+        showError("Không thể thích phản hồi. Vui lòng thử lại!");
       }
     }
   };
@@ -165,7 +167,7 @@ export default function ReplyItem({
           await onLoadReplies();
         }
       } catch (error) {
-        showErrorAlert(error, "Không thể xóa phản hồi. Vui lòng thử lại!");
+        showError("Không thể xóa phản hồi. Vui lòng thử lại!");
       }
     }
   };
@@ -282,7 +284,7 @@ export default function ReplyItem({
                           try {
                             await onDelete();
                           } catch (error) {
-                            showErrorAlert(error, "Thao tác đã thất bại. Vui lòng thử lại!");
+                            showError("Thao tác đã thất bại. Vui lòng thử lại!");
                           }
                         }}
                       >

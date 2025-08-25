@@ -5,7 +5,8 @@ import { ChefHat } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import type { PostEntity, PostMedia, PostRecipeRef } from "../../types/post.type";
 import { updatePost } from "../../services/post.service";
-import { showErrorAlert } from "../../utils/errorHandler";
+import { AlertPopup } from "./index";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import RecipeSelectionModal from "./RecipeSelectionModal";
 import type { RecipeListItem } from "../../services/recipe.service";
 import { uploadFiles } from "../../services/upload.service";
@@ -23,6 +24,7 @@ export default function EditPostPopup({
   onClose,
   onUpdate,
 }: EditPostPopupProps) {
+  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const [caption, setCaption] = useState(post.caption || "");
   const [media, setMedia] = useState<PostMedia[]>(post.media || []);
   const [newMedia, setNewMedia] = useState<{ file: File; preview: string }[]>([]);
@@ -162,16 +164,18 @@ export default function EditPostPopup({
       }
       
       const updatedPost = await updatePost(post.id, updateData);
-      
+
       setUploadProgress(100);
-      setTimeout(() => {
-        onUpdate(updatedPost.post);
-        onClose();
-      }, 500);
+      showSuccess("Chỉnh sửa bài viết thành công!", {
+        onConfirm: () => {
+          onUpdate(updatedPost.post);
+          onClose();
+        },
+      });
     } catch (error) {
       const errorMessage = "Lỗi khi cập nhật bài viết";
       setError(errorMessage);
-      showErrorAlert(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -407,6 +411,17 @@ export default function EditPostPopup({
         isOpen={showRecipeModal}
         onClose={() => setShowRecipeModal(false)}
         onSelect={handleSelectRecipe}
+      />
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
       />
     </>
   );
