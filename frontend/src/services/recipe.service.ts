@@ -44,7 +44,7 @@ export const recipesService = {
 
   async createRecipe(createRecipeDto: CreateRecipeDto) {
     try {
-      const response = await post("/recipes", createRecipeDto);
+      const response = await post("/recipes", { recipe: createRecipeDto });
       return response.data;
     } catch (error) {
       throw error;
@@ -53,7 +53,7 @@ export const recipesService = {
 
   async updateRecipe(id: number, updateRecipeDto: UpdateRecipeDto) {
     try {
-      const response = await put(`/recipes/${id}`, updateRecipeDto);
+      const response = await put(`/recipes/${id}`, { recipe: updateRecipeDto });
       return response.data;
     } catch (error) {
       throw error;
