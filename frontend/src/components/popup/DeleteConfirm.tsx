@@ -9,7 +9,7 @@ interface DeleteConfirmProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  type: "post" | "comment" | "message";
+  type: "post" | "comment" | "message" | "delete_member" | "leave_conversation";
 }
 
 const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
@@ -27,6 +27,10 @@ const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
       ? "Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác."
       : type === "message"
       ? "Bạn có chắc chắn muốn xóa tin nhắn này? Hành động này không thể hoàn tác."
+      : type === "delete_member"
+      ? "Bạn có chắc chắn muốn xóa thành viên này khỏi cuộc trò chuyện? Hành động này không thể hoàn tác."
+      : type === "leave_conversation"
+      ? "Bạn có chắc chắn muốn rời khỏi cuộc trò chuyện? Hành động này không thể hoàn tác."
       : "";
   };
 
@@ -37,6 +41,10 @@ const DeleteConfirm: React.FC<DeleteConfirmProps> = ({
       ? "Xóa bình luận"
       : type === "message"
       ? "Xóa tin nhắn"
+      : type === "delete_member"
+      ? "Xóa thành viên"
+      : type === "leave_conversation"
+      ? "Rời khỏi cuộc trò chuyện"
       : "";
   };
 

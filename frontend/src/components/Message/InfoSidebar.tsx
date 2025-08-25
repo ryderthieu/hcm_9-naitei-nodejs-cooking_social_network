@@ -103,13 +103,15 @@ export const InfoSidebar: React.FC<InfoSidebarProps> = ({
             <FileText size={20} className="text-gray-600" />
             <span className="text-gray-700">Liên kết</span>
           </button>
-          <button
-            className="w-full flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition-colors hover:cursor-pointer"
-            onClick={onClickLeave}
-          >
-            <LogOut size={20} className="text-red-500" />
-            <span className="text-red-500">Rời khỏi cuộc trò chuyện</span>
-          </button>
+          {conversation.members.length > 2 && (
+            <button
+              className="w-full flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition-colors hover:cursor-pointer"
+              onClick={onClickLeave}
+            >
+              <LogOut size={20} className="text-red-500" />
+              <span className="text-red-500">Rời khỏi cuộc trò chuyện</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
