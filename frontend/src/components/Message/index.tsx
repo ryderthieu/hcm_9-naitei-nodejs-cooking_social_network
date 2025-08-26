@@ -14,3 +14,4 @@ export { InfoSidebar } from "./InfoSidebar";
 export { ConversationEditModal } from "./ConversationEditModal";
 export { CreateConversation } from "./CreateConversation";
 export { Members } from "./Members";
+export { SearchMessage } from "./SearchMessage";

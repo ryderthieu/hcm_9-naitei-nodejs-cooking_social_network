@@ -17,6 +17,7 @@ import {
   InfoSidebar,
   ConversationEditModal,
   CreateConversation,
+  SearchMessage,
 } from "../../../components/Message";
 import type {
   Conversation,
@@ -35,7 +36,10 @@ import {
   addMemberToConversation,
 } from "../../../services/conversation.service";
 import { useAuth } from "../../../contexts/AuthContext";
-import { getMessages } from "../../../services/message.service";
+import {
+  getMessageContext,
+  getMessages,
+} from "../../../services/message.service";
 import { DeleteConfirm } from "../../../components/popup";
 import { uploadFiles } from "../../../services/upload.service";
 import { Members } from "../../../components/Message/Members";
@@ -99,7 +103,15 @@ export default function MessagePage() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<
     number | null
   >(null);
-
+  const [isContextMode, setIsContextMode] = useState<boolean>(false);
+  const [isLoadingContextBefore, setIsLoadingContextBefore] =
+    useState<boolean>(false);
+  const [isLoadingContextAfter, setIsLoadingContextAfter] =
+    useState<boolean>(false);
+  const [hasMoreMessagesBefore, setHasMoreMessagesBefore] =
+    useState<boolean>(true);
+  const [hasMoreMessagesAfter, setHasMoreMessagesAfter] =
+    useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef<boolean>(true);
@@ -168,7 +180,7 @@ export default function MessagePage() {
   };
 
   const [page, setPage] = useState<number>(1);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
   const [limit] = useState<number>(20);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
@@ -214,32 +226,128 @@ export default function MessagePage() {
   };
 
   const loadOlderMessages = async () => {
+    if (isContextMode) return;
     if (!selectedConversationId || !hasNextPage || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+
     try {
-      setIsLoadingMore(true);
       const container = messageContainerRef.current;
-      if (container) {
-        prevScrollHeightRef.current = container.scrollHeight;
-        prevScrollTopRef.current = container.scrollTop;
-      }
+      const prevHeight = container?.scrollHeight ?? 0;
+      const prevTop = container?.scrollTop ?? 0;
+
       const nextPage = page + 1;
       const response: MessagesResponse = await getMessages(
         Number(selectedConversationId),
         { page: nextPage, limit }
       );
-      if (response && Array.isArray(response.messages)) {
-        setMessages((prev) => [...response.messages, ...prev]);
-        setPage(response.meta?.currentPage || nextPage);
-        setHasNextPage(!!response.meta?.hasNextPage);
-        setTimeout(() => {
+
+      if (response?.messages?.length) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const unique = response.messages.filter(
+            (m) => !existingIds.has(m.id)
+          );
+          return [...unique, ...prev];
+        });
+
+        setPage(response.meta?.currentPage ?? nextPage);
+        setHasNextPage(Boolean(response.meta?.hasNextPage));
+
+        requestAnimationFrame(() => {
           const c = messageContainerRef.current;
           if (!c) return;
-          const delta = c.scrollHeight - prevScrollHeightRef.current;
-          c.scrollTop = prevScrollTopRef.current + delta;
-        }, 0);
+          const delta = c.scrollHeight - prevHeight;
+          c.scrollTop = prevTop + delta;
+        });
       }
     } finally {
       setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreContextBefore = async () => {
+    if (
+      !selectedConversationId ||
+      isLoadingContextBefore ||
+      !hasMoreMessagesBefore
+    )
+      return;
+
+    try {
+      setIsLoadingContextBefore(true);
+
+      const container = messageContainerRef.current;
+      if (container) {
+        prevScrollHeightRef.current = container.scrollHeight;
+        prevScrollTopRef.current = container.scrollTop;
+      }
+
+      const first = messages[0];
+      if (!first) return;
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        first.id,
+        { before: 10, after: 0 }
+      );
+
+      setHasMoreMessagesBefore(response.meta.hasMoreMessagesBefore);
+
+      const filtered = response.messages.filter(
+        (m: Message) => m.id !== first.id
+      );
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const unique = filtered.filter((m: Message) => !existingIds.has(m.id));
+        return unique.length ? [...unique, ...prev] : prev;
+      });
+
+      setTimeout(() => {
+        const c = messageContainerRef.current;
+        if (!c) return;
+        const delta = c.scrollHeight - prevScrollHeightRef.current;
+        c.scrollTop = prevScrollTopRef.current + delta;
+      }, 100);
+    } finally {
+      setIsLoadingContextBefore(false);
+    }
+  };
+
+  const loadMoreContextAfter = async () => {
+    if (
+      !selectedConversationId ||
+      isLoadingContextAfter ||
+      !hasMoreMessagesAfter
+    )
+      return;
+
+    try {
+      setIsLoadingContextAfter(true);
+
+      const last = messages[messages.length - 1];
+      if (!last) return;
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        last.id,
+        { before: 0, after: 10 }
+      );
+
+      setHasMoreMessagesAfter(response.meta.hasMoreMessagesAfter);
+
+      const filtered = response.messages.filter(
+        (m: Message) => m.id !== last.id
+      );
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const unique = filtered.filter((m: Message) => !existingIds.has(m.id));
+        return unique.length ? [...prev, ...unique] : prev;
+      });
+    } finally {
+      setIsLoadingContextAfter(false);
     }
   };
 
@@ -269,6 +377,57 @@ export default function MessagePage() {
       });
     } catch (error) {
       setError("Lỗi khi xóa thành viên");
+    }
+  };
+
+  const handleSearchMessages = async (searchText: string, page: number = 1) => {
+    try {
+      const response = await getMessages(Number(selectedConversationId), {
+        search: searchText,
+        page,
+      });
+      return {
+        ...response,
+        searchInfo: response?.searchInfo || {
+          query: searchText,
+          hasSearch: !!searchText?.trim(),
+        },
+      };
+    } catch (error) {
+      setError("Lỗi khi tìm kiếm tin nhắn");
+    }
+  };
+
+  const handleShowContext = async (messageId: number) => {
+    try {
+      setIsContextMode(true);
+
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        messageId,
+        {
+          before: 10,
+          after: 10,
+        }
+      );
+      setMessages(response.messages);
+
+      setTimeout(() => {
+        const target = document.getElementById(
+          `message-${response.targetMessageId}`
+        );
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          setHighlightedMessageId(response.targetMessageId);
+          setTimeout(() => {
+            setHighlightedMessageId(null);
+          }, 5000);
+        } else if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+        }
+      }, 100);
+    } catch (error) {
+      setError("Lỗi khi lấy nội dung tin nhắn");
     }
   };
 
@@ -356,6 +515,10 @@ export default function MessagePage() {
   }, [selectedConversationId]);
 
   useEffect(() => {
+    setHasMoreMessagesBefore(true);
+    setHasMoreMessagesAfter(true);
+    setPage(1);
+
     const container = messageContainerRef.current;
     if (!container) return;
     const handleScroll = () => {
@@ -365,13 +528,20 @@ export default function MessagePage() {
       isAtBottomRef.current = distanceFromBottom < 80;
       lastScrollTopRef.current = scrollTop;
       if (scrollTop <= 80) {
-        loadOlderMessages();
+        if (isContextMode) {
+          loadMoreContextBefore();
+        } else {
+          loadOlderMessages();
+        }
+      }
+      if (distanceFromBottom <= 80 && isContextMode) {
+        loadMoreContextAfter();
       }
     };
     container.addEventListener("scroll", handleScroll);
     isAtBottomRef.current = true;
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, isContextMode, messages.length]);
 
   useEffect(() => {
     if (!user) return;
@@ -518,8 +688,6 @@ export default function MessagePage() {
           selectedConversationId &&
           String(conversationId) === selectedConversationId
         ) {
-          console.log("user", user);
-          console.log("messages", messages);
           setMessages((prev) =>
             prev.map((m) => {
               const exists = m.seenBy?.some((s) => s.userId === user.id);
@@ -556,7 +724,6 @@ export default function MessagePage() {
     socket.on(
       "conversation_update",
       ({ conversationId }: { conversationId: number }) => {
-        console.log("conversation_update", conversationId);
         if (conversationUpdateTimeoutRef.current[conversationId]) {
           clearTimeout(conversationUpdateTimeoutRef.current[conversationId]);
         }
@@ -565,14 +732,12 @@ export default function MessagePage() {
           async () => {
             try {
               const updatedConversation = await getConversation(conversationId);
-              console.log("updatedConversation", updatedConversation);
               if (updatedConversation) {
                 setConversations((prev) => {
                   const updated = [...prev];
 
                   const idx = prev.findIndex((c) => c.id === conversationId);
                   if (idx === -1) {
-                    console.log("updatedConversation", updatedConversation);
                     if (updatedConversation.lastMessage) {
                       return [updatedConversation, ...updated];
                     } else {
@@ -659,8 +824,7 @@ export default function MessagePage() {
       reactions: [],
       seenBy: [],
     };
-
-    setMessages((prev) => [...prev, tempMessage]);
+    setMessages((prev) => [tempMessage, ...prev]);
 
     const payload = {
       conversationId: Number(selectedConversationId),
@@ -753,25 +917,44 @@ export default function MessagePage() {
     setReplyingTo(message);
   };
 
-  const handleReplyClick = (replyToMessageId: number) => {
+  const handleReplyClick = async (replyToMessageId: number) => {
     const targetMessage = messages.find((msg) => msg.id === replyToMessageId);
-    if (!targetMessage) return;
 
-    setHighlightedMessageId(replyToMessageId);
-
-    const messageElement = document.getElementById(
-      `message-${replyToMessageId}`
-    );
-    if (messageElement && messageContainerRef.current) {
-      messageElement.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    if (targetMessage) {
+      setHighlightedMessageId(replyToMessageId);
+      const element = document.getElementById(`message-${replyToMessageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      setTimeout(() => setHighlightedMessageId(null), 5000);
+      return;
     }
 
-    setTimeout(() => {
-      setHighlightedMessageId(null);
-    }, 3000);
+    try {
+      setIsContextMode(true);
+      const response = await getMessageContext(
+        Number(selectedConversationId),
+        replyToMessageId,
+        { before: 10, after: 10 }
+      );
+
+      setMessages(response.messages);
+      setHasMoreMessagesBefore(response.meta.hasMoreMessagesBefore);
+      setHasMoreMessagesAfter(response.meta.hasMoreMessagesAfter);
+
+      setTimeout(() => {
+        const element = document.getElementById(`message-${replyToMessageId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          setHighlightedMessageId(replyToMessageId);
+        }
+      }, 100);
+
+      setTimeout(() => setHighlightedMessageId(null), 5000);
+    } catch (err) {
+      setError("Lỗi khi lấy nội dung trả lời");
+      console.error(err);
+    }
   };
 
   const handleReactionToggle = (
@@ -1497,6 +1680,19 @@ export default function MessagePage() {
                 onBack={() => {
                   setSidebarTab(null);
                 }}
+              />
+            ) : sidebarTab === "search" ? (
+              <SearchMessage
+                onSearch={handleSearchMessages}
+                onShowContext={handleShowContext}
+                onClose={() => {
+                  setSidebarTab(null);
+                  setIsContextMode(false);
+                  if (selectedConversationId) {
+                    fetchMessages(selectedConversationId);
+                  }
+                }}
+                conversation={selectedConversation}
               />
             ) : (
               <InfoSidebar
