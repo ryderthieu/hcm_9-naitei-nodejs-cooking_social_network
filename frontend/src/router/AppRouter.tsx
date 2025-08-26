@@ -21,6 +21,7 @@ import AccountPage from "../pages/main/Account/AccountPage";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
 import DetailRecipe from "../pages/recipe/DetailRecipe";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
+import SearchPage from "../pages/main/SearchPage/SearchPage";
 
 export default function AppRouter() {
   return (
@@ -149,6 +150,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <DetailRecipe />
+          </MainLayout>
+        }
+      />
+
+      <Route 
+        path="/search"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SearchPage />
           </MainLayout>
         }
       />
