@@ -4,7 +4,8 @@ import EmojiPicker from "emoji-picker-react";
 import type { UserProfile } from "../../types/user.type";
 import { updateUserProfile } from "../../services/user.service";
 import { uploadFiles } from "../../services/upload.service";
-import { showErrorAlert, showSuccessAlert } from "../../utils/errorHandler";
+import { AlertPopup } from "./index";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 
 interface EditProfilePopupProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface EditProfilePopupProps {
 }
 
 export default function EditProfilePopup({ isOpen, onClose, initialUser, onUpdated }: EditProfilePopupProps) {
+  const { alert, showSuccess, showError, closeAlert } = useAlertPopup();
   const [formData, setFormData] = useState<UserProfile>({
     firstName: initialUser?.firstName || "",
     lastName: initialUser?.lastName || "",
@@ -45,10 +47,9 @@ export default function EditProfilePopup({ isOpen, onClose, initialUser, onUpdat
     try {
       const updated = await updateUserProfile(formData);
       onUpdated?.(updated);
-      showSuccessAlert("Cập nhật hồ sơ thành công!");
-      onClose();
+      showSuccess("Cập nhật hồ sơ thành công!", { onConfirm: onClose });
     } catch (error) {
-      showErrorAlert(error, "Không thể cập nhật hồ sơ");
+      showError("Không thể cập nhật hồ sơ");
     } finally {
       setSaving(false);
     }
@@ -66,7 +67,7 @@ export default function EditProfilePopup({ isOpen, onClose, initialUser, onUpdat
         }
       }
     } catch (error) {
-      showErrorAlert(error, 'Tải ảnh không thành công');
+      showError('Tải ảnh không thành công');
     } finally {
       if (event.target) event.target.value = '';
     }
@@ -190,8 +191,17 @@ export default function EditProfilePopup({ isOpen, onClose, initialUser, onUpdat
           </div>
         </form>
       </div>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
+      />
     </div>
   );
 }
-
-

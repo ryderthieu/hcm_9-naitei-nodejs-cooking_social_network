@@ -120,6 +120,10 @@ export interface RecipeListItem {
   title: string;
   slug: string;
   description?: string;
+  images?: { 
+    id: number; 
+    recipeId: number; 
+    imageUrl: string }[];
   author?: {
     id: number;
     firstName: string;

@@ -15,7 +15,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { recipesService } from "../../services/recipe.service";
 import { ingredientService } from "../../services/ingredient.service";
 import { uploadFiles } from "../../services/upload.service";
-import { showErrorAlert, showSuccessAlert } from "../../utils/errorHandler";
+import { AlertPopup } from "../../components/popup";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import CategoryModal from "../../components/modals/Recipe/CategoryModal";
 import type { CreateRecipeDto, IngredientDto, StepDto, ImageDto, UtensilDto, IngredientListItem, FormIngredient, FormStep } from "../../types/recipe.type";
 
@@ -24,6 +25,7 @@ const generateUniqueId = () => `id_${Math.random().toString(36).substr(2, 9)}`;
 export default function CreateRecipeForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { alert, showError, showSuccess, showInfo, closeAlert } = useAlertPopup();
 
   const [recipeName, setRecipeName] = useState("");
   const [description, setDescription] = useState("");
@@ -112,7 +114,7 @@ export default function CreateRecipeForm() {
         setUploadedImages([result[0].url]);
       }
     } catch (error) {
-      showErrorAlert(error, "Không thể upload ảnh");
+      showError("Không thể upload ảnh");
     }
   };
 
@@ -133,7 +135,7 @@ export default function CreateRecipeForm() {
         return next;
       });
     } catch (error) {
-      showErrorAlert(error, "Không thể upload ảnh");
+      showError("Không thể upload ảnh");
     }
   };
 
@@ -195,19 +197,19 @@ export default function CreateRecipeForm() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user) {
-      showErrorAlert(null, "Vui lòng đăng nhập để tạo công thức");
+      showInfo("Vui lòng đăng nhập để tạo công thức", { onConfirm: () => navigate("/auth/login") });
       return;
     }
     if (!recipeName.trim() || !description.trim()) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ tên và mô tả món ăn");
+      showError("Vui lòng điền đầy đủ tên và mô tả món ăn");
       return;
     }
     if (ingredients.some((ing) => !ing.name.trim() || !ing.amount.trim())) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ thông tin nguyên liệu");
+      showError("Vui lòng điền đầy đủ thông tin nguyên liệu");
       return;
     }
     if (steps.some((s) => !s.detail.trim())) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ các bước thực hiện");
+      showError("Vui lòng điền đầy đủ các bước thực hiện");
       return;
     }
     try {
@@ -245,7 +247,7 @@ export default function CreateRecipeForm() {
                 }
               } catch {}
             }
-            showErrorAlert(e, `Không thể tạo nguyên liệu: ${ing.name}`);
+            showError(`Không thể tạo nguyên liệu: ${ing.name}`);
             return;
           }
         }
@@ -266,10 +268,9 @@ export default function CreateRecipeForm() {
       };
 
       const resp = await recipesService.createRecipe(recipeData);
-      showSuccessAlert("Tạo công thức thành công!");
-      navigate(`/detail-recipe/${resp.recipe.id}`);
+      showSuccess("Tạo công thức thành công!", { onConfirm: () => navigate(`/detail-recipe/${resp.recipe.id}`) });
     } catch (error) {
-      showErrorAlert(error, "Không thể tạo công thức");
+      showError("Không thể tạo công thức");
     } finally {
       setIsSubmitting(false);
     }
@@ -810,6 +811,17 @@ export default function CreateRecipeForm() {
           </div>
         </form>
       </div>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
+      />
     </div>
   );
 }

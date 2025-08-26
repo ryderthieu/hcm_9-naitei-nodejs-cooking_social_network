@@ -4,11 +4,13 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { getCurrentUser, updateUserProfile } from "../../../services/user.service";
 import { uploadFiles } from "../../../services/upload.service";
 import { forgotPassword, resetPassword, verifyOtp } from "../../../services/auth.service";
-import { showErrorAlert, showSuccessAlert } from "../../../utils/errorHandler";
+import { AlertPopup } from "../../../components/popup";
+import { useAlertPopup } from "../../../hooks/useAlertPopup";
 import defaultAvatar from "../../../assets/avatar-default.svg";
 
 export default function AccountPage() {
   useAuth();
+  const { alert, showSuccess, showError, showInfo, closeAlert } = useAlertPopup();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -53,7 +55,7 @@ export default function AccountPage() {
         setOriginal(next);
         originalEmailRef.current = current?.email || "";
       } catch (error) {
-        showErrorAlert(error, "Không thể tải thông tin tài khoản");
+        showError("Không thể tải thông tin tài khoản");
       }
     };
     load();
@@ -70,7 +72,7 @@ export default function AccountPage() {
       const url = results?.[0]?.url;
       if (url) setForm((prev) => ({ ...prev, avatar: url }));
     } catch (error) {
-      showErrorAlert(error, "Tải ảnh không thành công");
+      showError("Tải ảnh không thành công");
     }
   };
 
@@ -101,11 +103,11 @@ export default function AccountPage() {
         gender: (form.gender) || undefined,
         birthday: form.birthday || undefined,
       });
-      showSuccessAlert("Cập nhật thông tin thành công!");
+      showSuccess("Cập nhật thông tin thành công!");
       setOriginal(form);
       setIsEditing(false);
     } catch (error) {
-      showErrorAlert(error, "Có lỗi xảy ra, vui lòng thử lại");
+      showError("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsSaving(false);
     }
@@ -116,13 +118,13 @@ export default function AccountPage() {
       setSendingOtp(true);
       const emailToUse = form.email || originalEmailRef.current;
       if (!emailToUse) {
-        showErrorAlert(null, "Không tìm thấy email để gửi OTP");
+        showInfo("Không tìm thấy email để gửi OTP");
         return;
       }
       await forgotPassword({ email: emailToUse });
-      showSuccessAlert("Đã gửi OTP tới email của bạn");
+      showSuccess("Đã gửi OTP tới email của bạn");
     } catch (error) {
-      showErrorAlert(error, "Không gửi được mã OTP. Vui lòng thử lại");
+      showError("Không gửi được mã OTP. Vui lòng thử lại");
     } finally {
       setSendingOtp(false);
     }
@@ -139,7 +141,7 @@ export default function AccountPage() {
     try {
       const emailToUse = form.email || originalEmailRef.current;
       if (!emailToUse) {
-        showErrorAlert(null, "Không tìm thấy email để xác thực");
+        showInfo("Không tìm thấy email để xác thực");
         return;
       }
       await verifyOtp({ email: emailToUse, otp });
@@ -158,17 +160,18 @@ export default function AccountPage() {
         gender: (form.gender) || undefined,
         birthday: form.birthday || undefined,
       });
-      showSuccessAlert("Đổi mật khẩu và cập nhật hồ sơ thành công!");
+      showSuccess("Đổi mật khẩu và cập nhật hồ sơ thành công!");
       setShowPasswordModal(false);
       setOtp("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
-      showErrorAlert(error, "OTP không đúng hoặc đã hết hạn");
+      showError("OTP không đúng hoặc đã hết hạn");
     }
   };
 
   return (
+    <>
     <div className="px-[110px] bg-[#F5F1E8] min-h-screen">
       <div className="flex gap-4 pt-[30px] pb-[10px]">
         <div className="bg-white rounded-2xl w-[70%] shadow-lg border border-gray-200">
@@ -462,6 +465,18 @@ export default function AccountPage() {
         </div>
       </div>
     </div>
+    <AlertPopup
+      isOpen={alert.isOpen}
+      type={alert.type}
+      title={alert.title}
+      message={alert.message}
+      confirmText={alert.confirmText}
+      showCancel={alert.showCancel}
+      cancelText={alert.cancelText}
+      onConfirm={alert.onConfirm}
+      onClose={closeAlert}
+    />
+  </>
   );
 }
 

@@ -4,3 +4,4 @@ export { default as FollowersPopup } from './FollowersPopup';
 export { default as EditProfilePopup } from './EditProfilePopup';
 export { default as RecipeSelectionModal } from './RecipeSelectionModal';
 export { default as DeleteConfirm } from './DeleteConfirm';
+export { default as AlertPopup } from './AlertPopup';

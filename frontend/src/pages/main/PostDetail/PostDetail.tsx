@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPostById } from "../../../services/post.service";
 import {
@@ -7,7 +7,8 @@ import {
   savePost,
   unsavePost,
 } from "../../../services/post.service";
-import { showErrorAlert, showSuccessAlert } from "../../../utils/utils";
+import { AlertPopup } from "../../../components/popup";
+import { useAlertPopup } from "../../../hooks/useAlertPopup";
 import { useAuth } from "../../../contexts/AuthContext";
 import UserHeader from "../../../components/common/user/UserHeader";
 import MediaCarousel from "../../../components/common/media/MediaCarousel";
@@ -20,6 +21,7 @@ export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { alert, showError, showInfo, closeAlert } = useAlertPopup();
 
   const [post, setPost] = useState<PostEntity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function PostDetail() {
         setPost(response.post);
       } catch (err) {
         setError("Không thể tải bài viết");
-        showErrorAlert(err, "Lỗi khi tải bài viết");
+        showError("Lỗi khi tải bài viết");
       } finally {
         setLoading(false);
       }
@@ -48,7 +50,11 @@ export default function PostDetail() {
   }, [id]);
 
   const handleLike = async () => {
-    if (!post || !user) return;
+    if (!post) return;
+    if (!user) {
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", { onConfirm: () => navigate("/auth/login") });
+      return;
+    }
 
     try {
       setLiking(true);
@@ -68,14 +74,18 @@ export default function PostDetail() {
         );
       }
     } catch (err) {
-      showErrorAlert(err, "Không thể thực hiện thao tác");
+      showError("Không thể thực hiện thao tác");
     } finally {
       setLiking(false);
     }
   };
 
   const handleSave = async () => {
-    if (!post || !user) return;
+    if (!post) return;
+    if (!user) {
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", { onConfirm: () => navigate("/auth/login") });
+      return;
+    }
 
     try {
       setSaving(true);
@@ -103,7 +113,7 @@ export default function PostDetail() {
         );
       }
     } catch (err) {
-      showErrorAlert(err, "Không thể thực hiện thao tác");
+      showError("Không thể thực hiện thao tác");
     } finally {
       setSaving(false);
     }
@@ -139,6 +149,7 @@ export default function PostDetail() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-yellow-50 bg-opacity-95 backdrop-blur-sm py-6">
       <div className="max-w-6xl mx-auto px-4">
         <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex">
@@ -236,5 +247,17 @@ export default function PostDetail() {
         }}
       />
     </div>
+    <AlertPopup
+      isOpen={alert.isOpen}
+      type={alert.type}
+      title={alert.title}
+      message={alert.message}
+      confirmText={alert.confirmText}
+      showCancel={alert.showCancel}
+      cancelText={alert.cancelText}
+      onConfirm={alert.onConfirm}
+      onClose={closeAlert}
+    />
+  </>
   );
 }
