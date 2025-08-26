@@ -15,3 +15,5 @@ export { ConversationEditModal } from "./ConversationEditModal";
 export { CreateConversation } from "./CreateConversation";
 export { Members } from "./Members";
 export { SearchMessage } from "./SearchMessage";
+export { Media, RenderMediaPreview } from "./Media";
+export { Link } from "./Link";

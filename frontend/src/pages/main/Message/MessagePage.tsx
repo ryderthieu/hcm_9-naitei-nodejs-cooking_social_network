@@ -18,6 +18,9 @@ import {
   ConversationEditModal,
   CreateConversation,
   SearchMessage,
+  Media,
+  Link,
+  RenderMediaPreview,
 } from "../../../components/Message";
 import type {
   Conversation,
@@ -124,6 +127,7 @@ export default function MessagePage() {
   const [sidebarTab, setSidebarTab] = useState<
     "members" | "search" | "media" | "link" | null
   >(null);
+  const [selectedMedia, setSelectedMedia] = useState<Message | null>(null);
   const { user, loading: isAuthLoading } = useAuth();
 
   const currentUserAsMember: Member | null = user
@@ -1236,7 +1240,6 @@ export default function MessagePage() {
                               )}
 
                               <div className="flex items-center space-x-2">
-
                                 <div className="">
                                   <Tooltip
                                     content={`${new Date(
@@ -1351,55 +1354,33 @@ export default function MessagePage() {
                                               ) as {
                                                 url: string;
                                                 kind?: string;
-                                                error?: boolean;
-                                                fileName?: string;
                                               };
                                               const kind = (
                                                 media.kind || "IMAGE"
                                               ).toUpperCase();
 
-                                              if (media.error) {
-                                                return (
-                                                  <div className="relative rounded-lg overflow-hidden max-h-72 border-2 border-red-300">
-                                                    {kind === "VIDEO" ? (
-                                                      <div className="w-64 h-36 bg-red-50 rounded-lg flex items-center justify-center">
-                                                        <Video
-                                                          size={32}
-                                                          className="text-red-400"
-                                                        />
-                                                      </div>
-                                                    ) : (
-                                                      <img
-                                                        src={media.url}
-                                                        alt="failed"
-                                                        className="rounded-lg max-h-72 object-contain opacity-50"
-                                                      />
-                                                    )}
-                                                    <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
-                                                      <div className="bg-red-100 rounded-lg p-3 text-center">
-                                                        <p className="text-red-600 text-sm font-medium">
-                                                          Upload thất bại
-                                                        </p>
-                                                        <p className="text-red-500 text-xs">
-                                                          {media.fileName}
-                                                        </p>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                );
-                                              }
-
                                               if (kind === "VIDEO") {
                                                 return (
-                                                  <video
-                                                    src={media.url}
-                                                    controls
-                                                    className="rounded-lg max-h-72"
-                                                  />
+                                                  <div
+                                                    className="relative cursor-pointer"
+                                                    onClick={() =>
+                                                      setSelectedMedia(message)
+                                                    }
+                                                  >
+                                                    <video
+                                                      src={media.url}
+                                                      muted
+                                                      controls
+                                                      className="rounded-lg max-h-72"
+                                                    />
+                                                  </div>
                                                 );
                                               }
                                               return (
                                                 <img
+                                                  onClick={() =>
+                                                    setSelectedMedia(message)
+                                                  }
                                                   src={media.url}
                                                   alt="media"
                                                   className="rounded-lg max-h-72 object-contain"
@@ -1420,16 +1401,12 @@ export default function MessagePage() {
                                               ) as {
                                                 id: number;
                                                 caption?: string;
-                                                slug?: string | null;
+                                                image: string | null;
                                               };
                                               return (
                                                 <a
-                                                  href={
-                                                    data.slug
-                                                      ? `/post/${data.slug}`
-                                                      : `/post/${data.id}`
-                                                  }
-                                                  className={`block p-3 rounded-lg border ${
+                                                  href={`/post/${data.id}`}
+                                                  className={`block p-3 rounded-lg border max-w-[400px] ${
                                                     isMyMessage
                                                       ? "bg-blue-400/40 border-blue-200"
                                                       : "bg-gray-100 border-gray-300"
@@ -1446,6 +1423,13 @@ export default function MessagePage() {
                                                     <div className="text-sm italic">
                                                       Xem bài viết
                                                     </div>
+                                                  )}
+                                                  {data.image && (
+                                                    <img
+                                                      src={data.image}
+                                                      alt="post"
+                                                      className="object-contain mt-4"
+                                                    />
                                                   )}
                                                 </a>
                                               );
@@ -1694,6 +1678,20 @@ export default function MessagePage() {
                 }}
                 conversation={selectedConversation}
               />
+            ) : sidebarTab === "media" ? (
+              <Media
+                onBack={() => {
+                  setSidebarTab(null);
+                }}
+                conversationId={Number(selectedConversationId)}
+              />
+            ) : sidebarTab === "link" ? (
+              <Link
+                onBack={() => {
+                  setSidebarTab(null);
+                }}
+                conversationId={Number(selectedConversationId)}
+              />
             ) : (
               <InfoSidebar
                 conversation={selectedConversation}
@@ -1756,6 +1754,13 @@ export default function MessagePage() {
         }}
         onCreated={handleCreateConversation}
       />
+
+      {selectedMedia && (
+        <RenderMediaPreview
+          media={selectedMedia}
+          onClose={() => setSelectedMedia(null)}
+        />
+      )}
     </div>
   );
 }

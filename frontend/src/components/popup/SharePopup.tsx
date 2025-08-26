@@ -1,17 +1,22 @@
-import { useState, useCallback } from "react";
-import { searchUsers } from "../../services/user.service";
-import { AlertPopup } from "./index";
-import { useAlertPopup } from "../../hooks/useAlertPopup";
+import { useState, useEffect, useCallback } from "react";
+import { showErrorAlert, showSuccessAlert } from "../../utils/utils";
 import { sharePost } from "../../services/post.service";
-import { getConversations, createConversation } from "../../services/conversation.service";
+import { getConversations } from "../../services/conversation.service";
 import { io } from "socket.io-client";
 import { getAccessToken } from "../../services/api.service";
+import type { Conversation, Member } from "../../types/conversation.type";
+import { useAuth } from "../../contexts/AuthContext";
+import { DEFAULT_AVATAR_URL } from "../../constants/constants";
+import { GroupAvatar } from "../Message/GroupAvatar";
+import AlertPopup from "./AlertPopup";
+import { useAlertPopup } from "../../hooks";
 
 interface SharePopupProps {
   isOpen: boolean;
   onClose: () => void;
   postCaption?: string;
   postId: number;
+  image: string;
   onShareSuccess?: (sharesCount: number) => void;
 }
 
@@ -20,45 +25,107 @@ export default function SharePopup({
   onClose,
   postCaption = "",
   postId,
+  image,
   onShareSuccess,
 }: SharePopupProps) {
   const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const [activeTab, setActiveTab] = useState<"social" | "messages">("social");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [filteredConversations, setFilteredConversations] = useState<
+    Conversation[]
+  >([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const { user } = useAuth();
 
-  const debouncedSearch = useCallback(
-    (() => {
-      let timeoutId: number;
-      return (query: string) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(async () => {
-          if (query.trim().length < 2) {
-            setSearchResults([]);
-            return;
-          }
+  useEffect(() => {
+    if (activeTab === "messages" && isOpen) {
+      loadConversations();
+    }
+  }, [activeTab, isOpen]);
 
-          setIsSearching(true);
-          try {
-            const users = await searchUsers(query);
-            setSearchResults(users);
-          } catch (error) {
-            showError("Không thể tìm kiếm người dùng. Vui lòng thử lại!");
-            setSearchResults([]);
-          } finally {
-            setIsSearching(false);
-          }
-        }, 300);
-      };
-    })(),
-    []
-  );
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredConversations(conversations);
+      return;
+    }
 
-  const handleSearchUsers = (query: string) => {
-    setSearchQuery(query);
-    debouncedSearch(query);
+    const query = searchQuery.toLowerCase();
+    const filtered = conversations.filter((conversation) => {
+      const displayName = getDisplayName(conversation).toLowerCase();
+      if (displayName.includes(query)) return true;
+
+      const memberNames = conversation.members
+        .map((member) => `${member.firstName} ${member.lastName}`.toLowerCase())
+        .join(" ");
+      if (memberNames.includes(query)) return true;
+
+      return false;
+    });
+
+    setFilteredConversations(filtered);
+  }, [searchQuery, conversations]);
+
+  const getDisplayName = (conversation: Conversation): string => {
+    const otherMembers = conversation.members.filter(
+      (member) => member.id !== user?.id
+    );
+    return (
+      conversation.name ||
+      otherMembers.map((member) => member.firstName).join(", ")
+    );
+  };
+
+  const getDisplayAvatar = (conversation: Conversation) => {
+    const otherMembers = conversation.members.filter(
+      (member) => member.id !== user?.id
+    );
+
+    if (conversation.avatar) {
+      return (
+        <img
+          src={conversation.avatar}
+          alt={getDisplayName(conversation)}
+          className="w-12 h-12 rounded-full object-cover border-2 border-transparent group-hover:border-yellow-600 transition-all"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = DEFAULT_AVATAR_URL;
+          }}
+        />
+      );
+    }
+
+    if (otherMembers.length > 0) {
+      return (
+        <GroupAvatar members={conversation.members} size={48} maxCount={3} />
+      );
+    }
+
+    return (
+      <img
+        src={DEFAULT_AVATAR_URL}
+        alt={getDisplayName(conversation)}
+        className="w-12 h-12 rounded-full object-cover border-2 border-transparent group-hover:border-yellow-600 transition-all"
+      />
+    );
+  };
+
+  const loadConversations = async () => {
+    setIsLoadingConversations(true);
+    try {
+      const response = await getConversations();
+      const conversationsList = Array.isArray(response)
+        ? response
+        : response.conversations || [];
+      setConversations(conversationsList);
+      setFilteredConversations(conversationsList);
+    } catch (error) {
+      showErrorAlert(error, "Không thể tải danh sách cuộc trò chuyện");
+      setConversations([]);
+      setFilteredConversations([]);
+    } finally {
+      setIsLoadingConversations(false);
+    }
   };
 
   const handleShareToSocial = async (platform: string) => {
@@ -72,16 +139,28 @@ export default function SharePopup({
       onClose();
 
       const shareUrl = `${window.location.origin}/post/${postId}`;
-      const shareText = `Xem bài viết này: ${postCaption ? postCaption.substring(0, 100) + '...' : 'Bài viết mới'}`;
+      const shareText = `Xem bài viết này: ${
+        postCaption ? postCaption.substring(0, 100) + "..." : "Bài viết mới"
+      }`;
 
       switch (platform) {
-        case 'facebook':
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+        case "facebook":
+          window.open(
+            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+              shareUrl
+            )}`,
+            "_blank"
+          );
           break;
-        case 'twitter':
-          window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+        case "twitter":
+          window.open(
+            `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+              shareUrl
+            )}&text=${encodeURIComponent(shareText)}`,
+            "_blank"
+          );
           break;
-        case 'copy':
+        case "copy":
           navigator.clipboard.writeText(shareUrl);
           showSuccess("Đã sao chép link bài viết!");
           break;
@@ -93,7 +172,7 @@ export default function SharePopup({
     }
   };
 
-  const handleShareToUser = async (userId: number) => {
+  const handleShareToConversation = async (conversationId: number) => {
     if (sharing) return;
     setSharing(true);
     try {
@@ -102,50 +181,31 @@ export default function SharePopup({
         onShareSuccess?.(response.sharesCount);
       }
 
-      let conversationId: number;
-      try {
-        const conversation = await createConversation({ members: [userId] });
-        conversationId = conversation.conversation.id;
-      } catch (error: any) {
-        if (error.message?.includes('already exists')) {
-          const conversationsResponse = await getConversations();
-          const conversations = Array.isArray(conversationsResponse) ? conversationsResponse : conversationsResponse.conversations || [];
-
-          const existingConversation = conversations.find((conv: any) =>
-            conv.members?.length === 2 &&
-            conv.members?.some((member: any) => member.id === userId)
-          );
-          if (!existingConversation) {
-            throw new Error('Không thể tìm conversation hiện có');
-          }
-          conversationId = existingConversation.id;
-        } else {
-          throw error;
-        }
-      }
-
-      const postUrl = `${window.location.origin}/post/${postId}`;
-      const messageContent = `Xem bài viết này: ${postCaption ? postCaption.substring(0, 100) + '...' : 'Bài viết mới'} ${postUrl}`;
+      const messageContent = {
+        id: postId,
+        caption: postCaption,
+        image: image,
+      };
 
       const token = getAccessToken();
       if (!token) {
-        throw new Error('Không có token xác thực');
+        throw new Error("Không có token xác thực");
       }
 
-      const socket = io('http://localhost:3000/messages', {
-        auth: { token }
+      const socket = io("http://localhost:3000/messages", {
+        auth: { token },
       });
 
       await new Promise((resolve, reject) => {
-        socket.on('connect', () => {
+        socket.on("connect", () => {
           const payload = {
             conversationId,
-            content: messageContent,
-            type: 'POST' as const,
+            content: JSON.stringify(messageContent),
+            type: "POST" as any,
             replyOf: null as number | null,
           };
 
-          socket.emit('send_message', payload, (response: any) => {
+          socket.emit("send_message", payload, (response: any) => {
             if (response && response.error) {
               reject(new Error(response.error));
             } else {
@@ -154,12 +214,12 @@ export default function SharePopup({
           });
         });
 
-        socket.on('connect_error', (error) => {
+        socket.on("connect_error", (error) => {
           reject(error);
         });
 
         setTimeout(() => {
-          reject(new Error('Kết nối timeout'));
+          reject(new Error("Kết nối timeout"));
         }, 10000);
       });
 
@@ -280,7 +340,7 @@ export default function SharePopup({
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
+                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.904 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
                 </svg>
               </div>
               <span>Chia sẻ Twitter</span>
@@ -306,34 +366,32 @@ export default function SharePopup({
                 type="text"
                 placeholder="Tìm kiếm cuộc trò chuyện..."
                 value={searchQuery}
-                onChange={(e) => handleSearchUsers(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:bg-white transition-all"
               />
             </div>
 
             <div className="max-h-60 overflow-y-auto">
-              {isSearching ? (
+              {isLoadingConversations ? (
                 <div className="text-center py-8 text-gray-500">
-                  Đang tìm kiếm...
+                  Đang tải cuộc trò chuyện...
                 </div>
-              ) : searchResults && searchResults.length > 0 ? (
-                searchResults.map((user) => (
+              ) : filteredConversations && filteredConversations.length > 0 ? (
+                filteredConversations.map((conversation) => (
                   <button
-                    key={user.id}
-                    onClick={() => handleShareToUser(user.id)}
+                    key={conversation.id}
+                    onClick={() => handleShareToConversation(conversation.id)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-yellow-50 transition-all duration-300 group"
                   >
-                    <img
-                      src={user.avatar || "/src/assets/avatar-default.svg"}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover border-2 border-transparent group-hover:border-yellow-600 transition-all"
-                    />
+                    <div className="flex-shrink-0">
+                      {getDisplayAvatar(conversation)}
+                    </div>
                     <div className="flex-1 text-left">
                       <div className="font-medium text-gray-800">
-                        {user.firstName} {user.lastName}
+                        {getDisplayName(conversation)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        @{user.username}
+                        {conversation.members?.length || 0} thành viên
                       </div>
                     </div>
                     <svg
@@ -349,13 +407,13 @@ export default function SharePopup({
                     </svg>
                   </button>
                 ))
-              ) : searchQuery && searchQuery.length >= 2 ? (
+              ) : searchQuery ? (
                 <div className="text-center py-8 text-gray-500">
-                  Không tìm thấy người dùng
+                  Không tìm thấy cuộc trò chuyện nào
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  Nhập tên người dùng để tìm kiếm
+                  Không có cuộc trò chuyện nào
                 </div>
               )}
             </div>
