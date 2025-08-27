@@ -7,6 +7,7 @@ import { useAlertPopup } from "../../hooks/useAlertPopup";
 import HeartIcon from "./icons/HeartIcon";
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
 import { FaReply } from "react-icons/fa";
+import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 import EmojiPicker from "emoji-picker-react";
 
 interface ReplyUser {
@@ -179,7 +180,7 @@ export default function ReplyItem({
       <div className={`flex items-start gap-3 ${indentClass}`}>
         <div className="flex-shrink-0 pt-1">
           <img
-            src={user.avatar || "/src/assets/avatar-default.svg"}
+            src={user.avatar || DEFAULT_AVATAR_URL}
             alt="avatar"
             className="w-8 h-8 rounded-full object-cover border border-gray-200"
           />

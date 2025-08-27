@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import ProfileStats from "./ProfileStats";
 import { FollowersPopup } from "../../popup";
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 
 interface ProfileHeaderProps {
   user: any;
@@ -49,7 +50,7 @@ export default function ProfileHeader({
         <div className="absolute -bottom-16 left-8">
           <div className="w-36 h-36 rounded-full border-4 border-white overflow-hidden bg-gray-200">
             <img
-              src={user?.avatar || "/src/assets/avatar-default.svg"}
+              src={user?.avatar || DEFAULT_AVATAR_URL}
               alt={user?.firstName || "User"}
               className="w-full h-full object-cover"
             />

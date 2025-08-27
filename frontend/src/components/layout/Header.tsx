@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import logo from "../../assets/logo.svg";
-import avatarDefault from "../../assets/avatar-default.svg";
+import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 import { FaChevronDown, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IoSearchOutline } from "react-icons/io5";
@@ -180,7 +180,7 @@ const Header = () => {
           >
             <div className="flex items-center gap-4">
               <img
-                src={user?.avatar || avatarDefault}
+                src={user?.avatar || DEFAULT_AVATAR_URL}
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#FFB800]"
                 alt="User avatar"
               />

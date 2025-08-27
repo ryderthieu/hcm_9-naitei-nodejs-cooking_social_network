@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { FaceSmileIcon } from "@heroicons/react/24/outline";
 import EmojiPicker from 'emoji-picker-react';
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 
 interface CommentInputProps {
   value: string;
@@ -80,7 +81,7 @@ export default function CommentInput({
           />
         ) : (
           <img
-            src="/src/assets/avatar-default.svg"
+            src={DEFAULT_AVATAR_URL}
             alt="default avatar"
             className="w-8 h-8 rounded-full object-cover border border-gray-200"
           />

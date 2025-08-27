@@ -1,4 +1,5 @@
 import { timeAgoVi, showErrorAlert } from "../../../utils/utils";
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { followUser, unfollowUser } from "../../../services/user.service";
@@ -90,7 +91,7 @@ export default function UserHeader({
     <div className={`flex items-center gap-3 ${className}`}>
       {!hideAvatar && (
         <img
-          src={user.avatar || "/src/assets/avatar-default.svg"}
+          src={user.avatar || DEFAULT_AVATAR_URL}
           alt="avatar"
           className={`${classes.avatar} rounded-full object-cover border border-gray-200`}
         />
