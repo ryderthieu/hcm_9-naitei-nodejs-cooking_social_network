@@ -13,3 +13,4 @@ export {
   createValidator,
   type ValidationResult,
 } from "./validationUtils";
+export { getPreviewImage } from "./getImageReview";

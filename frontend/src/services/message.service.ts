@@ -1,3 +1,4 @@
+import type { MessageType } from "../types/conversation.type";
 import { get } from "./api.service";
 
 export async function getMessages(
@@ -9,6 +10,7 @@ export async function getMessages(
     from?: Date;
     to?: Date;
     senderId?: number;
+    type?: MessageType;
   }
 ) {
   try {
@@ -19,11 +21,11 @@ export async function getMessages(
     if (params?.from) query.set("from", params.from.toISOString());
     if (params?.to) query.set("to", params.to.toISOString());
     if (params?.senderId) query.set("senderId", String(params.senderId));
+    if (params?.type) query.set("type", params.type);
     const qs = query.toString();
     const response = await get(
       `/conversations/${conversationId}/messages${qs ? `?${qs}` : ""}`
     );
-    console.log(qs);
     return response.data;
   } catch (error) {
     throw error;
@@ -47,7 +49,6 @@ export async function getMessageContext(
         qs ? `?${qs}` : ""
       }`
     );
-    console.log(qs);
     return response.data;
   } catch (error) {
     throw error;

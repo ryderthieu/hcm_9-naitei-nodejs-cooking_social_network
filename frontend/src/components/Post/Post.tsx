@@ -18,6 +18,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import UserHeader from "../common/user/UserHeader";
 import MediaGrid from "../common/media/MediaGrid";
 import { useAlertPopup } from "../../hooks/useAlertPopup";
+import { getPreviewImage, showErrorAlert } from "../../utils/utils";
 
 interface PostProps {
   post: PostEntity;
@@ -224,9 +225,7 @@ export default function Post({
               <p className="text-gray-900 mb-2">
                 <span
                   className="text-yellow-500 font-medium hover:underline cursor-pointer"
-                  onClick={() =>
-                    navigate(`/detail-recipe/${data.recipe.id}`)
-                  }
+                  onClick={() => navigate(`/detail-recipe/${data.recipe.id}`)}
                 >
                   @{data.recipe.title}
                 </span>
@@ -266,6 +265,7 @@ export default function Post({
         onClose={sharePopup.close}
         postCaption={data.caption}
         postId={data.id}
+        image={getPreviewImage(data)}
         onShareSuccess={(sharesCount) => {
           setData((prev) =>
             prev ? { ...prev, shares_count: sharesCount } : prev
