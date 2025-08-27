@@ -4,7 +4,7 @@ import bgImage from "../../../assets/login/background.png";
 import bowl from "../../../assets/login/bowl.png";
 import logo from "../../../assets/logo.svg";
 import type { LoginDto, LoginErrors } from "../../../types/auth.type";
-import { login } from "../../../services/auth.service";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const Login = () => {
   const [formData, setFormData] = useState<LoginDto>({
@@ -21,6 +21,7 @@ const Login = () => {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
+  const { login: authLogin, checkAuth } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -81,7 +82,8 @@ const Login = () => {
     }
 
     try {
-      await login(formData);
+      await authLogin(formData);
+      await checkAuth();
       navigate("/");
     } catch (error: any) {
       setApiError(error?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
