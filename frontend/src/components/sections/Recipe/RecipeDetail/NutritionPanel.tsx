@@ -13,10 +13,6 @@ interface NutritionPanelProps {
 export default function NutritionPanel({
   calculatedNutrition,
 }: NutritionPanelProps) {
-  console.log("NutritionPanel - calculatedNutrition:", calculatedNutrition);
-  console.log("NutritionPanel - type:", typeof calculatedNutrition);
-  console.log("NutritionPanel - is truthy:", !!calculatedNutrition);
-
   const defaultNutrition = [
     {
       label: "Calories",
@@ -34,19 +30,13 @@ export default function NutritionPanel({
     value: number | undefined,
     unit: string
   ): string => {
-    console.log(
-      `Formatting value: ${value}, unit: ${unit}, type: ${typeof value}`
-    );
-
     if (value === undefined || value === null || isNaN(value)) {
-      console.log(`Invalid value detected, returning 0 ${unit}`);
       return `0 ${unit}`;
     }
 
     const rounded = Math.round(value * 10) / 10;
     const formatted =
       rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
-    console.log(`Formatted result: ${formatted} ${unit}`);
     return `${formatted} ${unit}`;
   };
   const nutritionData =
@@ -82,8 +72,6 @@ export default function NutritionPanel({
           },
         ]
       : defaultNutrition;
-
-  console.log("Final nutritionData:", nutritionData);
 
   const mainNutrients = nutritionData.filter(
     (item) => item.category === "main"

@@ -45,17 +45,17 @@ const Footer = () => {
 
         <div>
           <h1 className="text-[20px] font-bold">Blog ẩm thực</h1>
-          <a href="/blog/bai-viet-moi">
+          <a href="/blog/new-article">
             <p className="pt-4 hover:text-white text-[#FFFFFF] text-opacity-50">
               Bài viết mới nhất
             </p>
           </a>
-          <a href="/blog/bai-viet-noi-bat">
+          <a href="/blog/highlighted-article">
             <p className="pt-4 hover:text-white text-[#FFFFFF] text-opacity-50">
               Bài viết nổi bật
             </p>
           </a>
-          <a href="/blog/bai-viet-pho-bien">
+          <a href="/blog/trending-article">
             <p className="pt-4 hover:text-white text-[#FFFFFF] text-opacity-50">
               Bài viết phổ biến
             </p>

@@ -9,6 +9,7 @@ import {
 } from "../../../services/post.service";
 import { AlertPopup } from "../../../components/popup";
 import { useAlertPopup } from "../../../hooks/useAlertPopup";
+import { getPreviewImage } from "../../../utils/utils";
 import { useAuth } from "../../../contexts/AuthContext";
 import UserHeader from "../../../components/common/user/UserHeader";
 import MediaCarousel from "../../../components/common/media/MediaCarousel";
@@ -52,7 +53,9 @@ export default function PostDetail() {
   const handleLike = async () => {
     if (!post) return;
     if (!user) {
-      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", { onConfirm: () => navigate("/auth/login") });
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", {
+        onConfirm: () => navigate("/auth/login"),
+      });
       return;
     }
 
@@ -83,7 +86,9 @@ export default function PostDetail() {
   const handleSave = async () => {
     if (!post) return;
     if (!user) {
-      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", { onConfirm: () => navigate("/auth/login") });
+      showInfo("Vui lòng đăng nhập để thực hiện thao tác này", {
+        onConfirm: () => navigate("/auth/login"),
+      });
       return;
     }
 
@@ -150,114 +155,126 @@ export default function PostDetail() {
 
   return (
     <>
-    <div className="min-h-screen bg-yellow-50 bg-opacity-95 backdrop-blur-sm py-6">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex">
-          <div className="flex-1 bg-black overflow-hidden relative flex items-center justify-center">
-            {post.media && post.media.length > 0 && (
-              <div className="w-full h-full flex items-center justify-center">
-                <MediaCarousel items={post.media} />
-              </div>
-            )}
+      <div className="min-h-screen bg-yellow-50 bg-opacity-95 backdrop-blur-sm py-6">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex">
+            <div className="flex-1 bg-black overflow-hidden relative flex items-center justify-center">
+              {post.media && post.media.length > 0 && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <MediaCarousel items={post.media} />
+                </div>
+              )}
 
-            <button
-              onClick={() => navigate(-1)}
-              className="absolute top-4 left-4 bg-black bg-opacity-50 text-white hover:text-gray-300 transition-colors z-10 rounded-full p-2"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <button
+                onClick={() => navigate(-1)}
+                className="absolute top-4 left-4 bg-black bg-opacity-50 text-white hover:text-gray-300 transition-colors z-10 rounded-full p-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="w-96 bg-white flex flex-col max-h-[90vh] overflow-hidden">
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <UserHeader
+                  user={post.author}
+                  timestamp={post.created_at}
+                  size="md"
+                  showFollowButton={true}
+                  isFollowing={post.following_author}
+                  currentUserId={user?.id}
                 />
-              </svg>
-            </button>
-          </div>
-
-          <div className="w-96 bg-white flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <UserHeader
-                user={post.author}
-                timestamp={post.created_at}
-                size="md"
-                showFollowButton={true}
-                isFollowing={post.following_author}
-                currentUserId={user?.id}
-              />
-            </div>
-
-            {(post.recipe || post.caption) && (
-              <div className="p-4 border-b border-gray-200">
-                {post.recipe && (
-                  <p className="text-gray-900 mb-2">
-                    <span
-                      className="text-yellow-500 font-medium hover:underline cursor-pointer"
-                      onClick={() =>
-                        navigate(
-                          `/recipe/${post.recipe.slug || post.recipe.id}`
-                        )
-                      }
-                    >
-                      @{post.recipe.title}
-                    </span>
-                  </p>
-                )}
-                <p className="text-gray-900">{post.caption}</p>
               </div>
-            )}
 
-            <div className="p-4 border-b border-gray-200">
-              <PostActionBar
-                variant="detail"
-                likesCount={post.likes_count}
-                commentsCount={post.comments_count}
-                sharesCount={post.shares_count || 0}
-                savesCount={post.saves_count || 0}
-                isLiked={Boolean(post.liked_by_me)}
-                isSaved={Boolean(post.saved_by_me)}
-                onLikeToggle={handleLike}
-                onCommentClick={() => {}}
-                onShareClick={() => setShowSharePopup(true)}
-                onSaveClick={handleSave}
-              />
-            </div>
+              {(post.recipe || post.caption) && (
+                <div className="p-4 border-b border-gray-200">
+                  {post.recipe && (
+                    <p className="text-gray-900 mb-2">
+                      <span
+                        className="text-yellow-500 font-medium hover:underline cursor-pointer"
+                        onClick={() =>
+                          navigate(
+                            `/recipe/${post.recipe.slug || post.recipe.id}`
+                          )
+                        }
+                      >
+                        @{post.recipe.title}
+                      </span>
+                    </p>
+                  )}
+                  <p className="text-gray-900">{post.caption}</p>
+                </div>
+              )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <Comments postId={post.id} />
+              <div className="p-4 border-b border-gray-200">
+                <PostActionBar
+                  variant="detail"
+                  likesCount={post.likes_count}
+                  commentsCount={post.comments_count}
+                  sharesCount={post.shares_count || 0}
+                  savesCount={post.saves_count || 0}
+                  isLiked={Boolean(post.liked_by_me)}
+                  isSaved={Boolean(post.saved_by_me)}
+                  onLikeToggle={handleLike}
+                  onCommentClick={() => {}}
+                  onShareClick={() => setShowSharePopup(true)}
+                  onSaveClick={handleSave}
+                />
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <Comments postId={post.id} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <SharePopup
-        isOpen={showSharePopup}
-        onClose={() => setShowSharePopup(false)}
-        postCaption={post.caption}
-        postId={post.id}
-        onShareSuccess={(sharesCount) => {
-          setPost((prev) =>
-            prev ? { ...prev, shares_count: sharesCount } : prev
-          );
-        }}
+        <SharePopup
+          isOpen={showSharePopup}
+          onClose={() => setShowSharePopup(false)}
+          postCaption={post.caption}
+          postId={post.id}
+          image={getPreviewImage(post)}
+          onShareSuccess={(sharesCount) => {
+            setPost((prev) =>
+              prev ? { ...prev, shares_count: sharesCount } : prev
+            );
+          }}
+        />
+      </div>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
       />
-    </div>
-    <AlertPopup
-      isOpen={alert.isOpen}
-      type={alert.type}
-      title={alert.title}
-      message={alert.message}
-      confirmText={alert.confirmText}
-      showCancel={alert.showCancel}
-      cancelText={alert.cancelText}
-      onConfirm={alert.onConfirm}
-      onClose={closeAlert}
-    />
-  </>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
+      />
+    </>
   );
 }

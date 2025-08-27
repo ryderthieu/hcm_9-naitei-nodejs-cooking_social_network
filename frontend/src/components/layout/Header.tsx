@@ -42,9 +42,9 @@ const Header = () => {
     const path = location.pathname;
     if (path === "/") {
       setActive(0);
-    } else if (path.startsWith("/recipes")) {
+    } else if (path.startsWith("/")) {
       setActive(1);
-    } else if (path.startsWith("/about")) {
+    } else if (path.startsWith("/community-recipes")) {
       setActive(2);
     } else if (path.startsWith("/support")) {
       setActive(3);

@@ -156,7 +156,7 @@ export default function AppRouter() {
         }
       />
 
-      <Route
+      <Route 
         path="/search"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
@@ -164,6 +164,7 @@ export default function AppRouter() {
           </MainLayout>
         }
       />
+
       <Route
         path="/edit-recipe/:id"
         element={

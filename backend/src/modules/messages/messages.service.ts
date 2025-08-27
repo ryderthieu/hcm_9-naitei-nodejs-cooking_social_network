@@ -64,6 +64,10 @@ export class MessagesService {
       whereCondition.sender = query.senderId;
     }
 
+    if (query.type) {
+      whereCondition.type = query.type;
+    }
+
     const totalMessages = await this.prisma.message.count({
       where: whereCondition,
     });
