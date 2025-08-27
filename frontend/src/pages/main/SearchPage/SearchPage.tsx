@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { FaSearch, FaNewspaper, FaBook, FaUser } from "react-icons/fa";
+import { FaSearch, FaNewspaper, FaBook, FaUser, FaFilter } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { searchUsers } from "../../../services/user.service";
 import type { User } from "../../../types/auth.type";
 import { PostList } from "../../../components/Post";
 import RecipeGrid from "../../../components/sections/Recipe/RecipeGrid";
 import UserCard from "../../../components/common/user/UserCard";
+
+const CONST = {
+  NEWEST: 'newest',
+  OLDEST: 'oldest',
+  FOLLOWED: 'followed'
+}
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -14,6 +20,12 @@ const SearchPage: React.FC = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [postSort, setPostSort] = useState<string>(CONST.NEWEST);
+  const [postFilterFollow, setPostFilterFollow] = useState<string>('all');
+  const [recipeIngredient, setRecipeIngredient] = useState<string>('all');
+  const [recipeTime, setRecipeTime] = useState<string>('all');
+  const [recipeDifficulty, setRecipeDifficulty] = useState<string>('all');
 
   const [userResult, setUserResult] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -27,6 +39,13 @@ const SearchPage: React.FC = () => {
     setSearchQuery(queryFromUrl);
     setPageSearchQuery(queryFromUrl);
     setActiveFilter(filterFromUrl);
+
+    setPostSort(params.get('postSort') || CONST.NEWEST);
+    setPostFilterFollow(params.get('postFilterFollow') || 'all');
+    setRecipeIngredient(params.get('recipeIngredient') || 'all');
+    setRecipeTime(params.get('recipeTime') || 'all');
+    setRecipeDifficulty(params.get('recipeDifficulty') || 'all');
+
   }, [location.search]);
 
   useEffect(() => {
@@ -77,6 +96,101 @@ const SearchPage: React.FC = () => {
     updateUrlParams({ filter: newFilter, q: searchQuery });
   };
 
+  const handlePostSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateUrlParams({ postSort: e.target.value, filter: 'posts', q: searchQuery });
+  };
+
+  const handlePostFilterFollowChange = (postFilterFollow: string) => {
+    updateUrlParams({ postFilterFollow: postFilterFollow, filter: 'posts', q: searchQuery });
+  };
+
+  const handleRecipeIngredientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateUrlParams({ recipeIngredient: e.target.value, filter: 'recipes', q: searchQuery });
+  };
+
+  const handleRecipeTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateUrlParams({ recipeTime: e.target.value, filter: 'recipes', q: searchQuery });
+  };
+
+  const handleRecipeDifficultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateUrlParams({ recipeDifficulty: e.target.value, filter: 'recipes', q: searchQuery });
+  };
+
+  const renderSidebarSubFilter = () => {
+    if (activeFilter === 'posts') {
+      return (
+        <div className="mt-3 space-y-2 pl-2">
+          <select
+            value={postSort}
+            onChange={handlePostSortChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value={CONST.NEWEST}>Gần nhất</option>
+            <option value={CONST.OLDEST}>Cũ nhất</option>
+          </select>
+
+          <button
+            className={`px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+              postFilterFollow === CONST.FOLLOWED
+                ? 'bg-[#FFB800] text-white border-[#FFB800]'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+            }`}
+            onClick={() =>
+              handlePostFilterFollowChange(
+                postFilterFollow === CONST.FOLLOWED ? 'all' : CONST.FOLLOWED
+              )
+            }
+          >
+            Đã follow
+          </button>
+        </div>
+      );
+    }
+
+    if (activeFilter === 'recipes') {
+      return (
+        <div className="mt-3 space-y-2 pl-2">
+          <select
+            value={recipeIngredient}
+            onChange={handleRecipeIngredientChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Nguyên liệu</option>
+            <option value="BEEF">Thịt bò</option>
+            <option value="CHICKEN">Thịt gà</option>
+            <option value="SEAFOOD">Cá</option>
+            <option value="EGG">Trứng</option>
+            <option value="VEGETABLES">Rau củ</option>
+          </select>
+
+          <select
+            value={recipeTime}
+            onChange={handleRecipeTimeChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Thời gian</option>
+            <option value="UNDER_15_MIN">Dưới 15 phút</option>
+            <option value="MIN_15_TO_30">15-30 phút</option>
+            <option value="OVER_1_HOUR">Trên 60 phút</option>
+          </select>
+
+          <select
+            value={recipeDifficulty}
+            onChange={handleRecipeDifficultyChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800]"
+          >
+            <option value="all">Độ khó</option>
+            <option value="EASY">Dễ</option>
+            <option value="MEDIUM">Trung bình</option>
+            <option value="HARD">Khó</option>
+          </select>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const renderResults = () => {
     if (loading)
       return <p className="text-center text-gray-600">Đang tải kết quả...</p>;
@@ -91,7 +205,11 @@ const SearchPage: React.FC = () => {
 
     switch (activeFilter) {
       case "posts":
-        return <PostList filter={{ keyword: searchQuery }} />;
+        return <PostList filter={{ 
+          keyword: searchQuery, 
+          sortBy: postSort === CONST.OLDEST ? 'oldest' : 'newest',
+          following: postFilterFollow === CONST.FOLLOWED ? true : undefined
+        }} />;
 
       case "recipes":
         return (
@@ -103,7 +221,12 @@ const SearchPage: React.FC = () => {
               [&>div>div]:md:gap-8
             "
           >
-            <RecipeGrid title="" initialQuery={{ name: searchQuery }} />
+            <RecipeGrid title="" currentUser="" initialQuery={{ 
+              name: searchQuery,
+              mainIngredient: recipeIngredient !== 'all' ? recipeIngredient : undefined,
+              timeBased: recipeTime !== 'all' ? recipeTime : undefined,
+              level: recipeDifficulty !== 'all' ? recipeDifficulty : undefined
+            }} />
           </div>
         );
 
@@ -169,6 +292,14 @@ const SearchPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-8">
             <div className="w-full md:w-72 flex-shrink-0">
               <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24 border border-gray-100">
+                <div className="flex items-center gap-2 mb-6">
+                  <button
+                    className="text-gray-500"
+                  >
+                    <FaFilter size={20} />
+                  </button>
+                  <h2 className="text-xl font-semibold text-gray-800">Bộ lọc</h2>
+                </div>
                 <div className="space-y-3">
                   <button
                     onClick={() => handleActiveFilterChange("posts")}
@@ -181,7 +312,7 @@ const SearchPage: React.FC = () => {
                     <FaNewspaper size={20} />
                     <span>Bài viết</span>
                   </button>
-
+                  {activeFilter === 'posts' && renderSidebarSubFilter()}
                   <button
                     onClick={() => handleActiveFilterChange("recipes")}
                     className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
@@ -193,7 +324,7 @@ const SearchPage: React.FC = () => {
                     <FaBook size={20} />
                     <span>Công thức</span>
                   </button>
-
+                  {activeFilter === 'recipes' && renderSidebarSubFilter()}
                   <button
                     onClick={() => handleActiveFilterChange("users")}
                     className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
