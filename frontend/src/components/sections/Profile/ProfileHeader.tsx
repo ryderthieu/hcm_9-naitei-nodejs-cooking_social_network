@@ -13,6 +13,7 @@ interface ProfileHeaderProps {
   onEditProfile: () => void;
   onMessage: (username: string) => void;
   onTabChange?: (tab: string) => void;
+  onStatsChange?: (type: 'followers' | 'following', count: number) => void;
 }
 
 export default function ProfileHeader({
@@ -25,6 +26,7 @@ export default function ProfileHeader({
   onEditProfile,
   onMessage,
   onTabChange,
+  onStatsChange,
 }: ProfileHeaderProps) {
   const [showFollowers, setShowFollowers] = useState<null | "followers" | "following">(null);
 
@@ -113,7 +115,7 @@ export default function ProfileHeader({
           </div>
         </div>
         <div className="mt-2">
-          <ProfileStats stats={stats} username={user?.username} />
+          <ProfileStats stats={stats} username={user?.username} onStatsChange={onStatsChange} />
         </div>
       </div>
     </div>
@@ -122,6 +124,7 @@ export default function ProfileHeader({
       onClose={() => setShowFollowers(null)}
       username={user?.username as string}
       type={showFollowers === "followers" ? "followers" : "following"}
+      onStatsChange={onStatsChange}
     />
     </>
   );

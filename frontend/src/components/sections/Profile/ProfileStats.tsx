@@ -4,9 +4,10 @@ import FollowersPopup from "../../popup/FollowersPopup";
 interface ProfileStatsProps {
   stats: any;
   username?: string;
+  onStatsChange?: (type: 'followers' | 'following', count: number) => void;
 }
 
-export default function ProfileStats({ stats, username }: ProfileStatsProps) {
+export default function ProfileStats({ stats, username, onStatsChange }: ProfileStatsProps) {
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
 
@@ -44,16 +45,17 @@ export default function ProfileStats({ stats, username }: ProfileStatsProps) {
             onClose={() => setShowFollowers(false)}
             username={username}
             type="followers"
+            onStatsChange={onStatsChange}
           />
           <FollowersPopup
             isOpen={showFollowing}
             onClose={() => setShowFollowing(false)}
             username={username}
             type="following"
+            onStatsChange={onStatsChange}
           />
         </>
       )}
     </>
   );
 }
-
