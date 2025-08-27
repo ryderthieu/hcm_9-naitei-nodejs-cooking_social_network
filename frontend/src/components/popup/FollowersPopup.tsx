@@ -11,6 +11,7 @@ interface FollowersPopupProps {
 	onClose: () => void;
 	username: string;
 	type: ListType;
+	onStatsChange?: (type: 'followers' | 'following', count: number) => void;
 }
 
 interface PopupUserItem {
@@ -22,7 +23,7 @@ interface PopupUserItem {
 	isFollowing?: boolean;
 }
 
-export default function FollowersPopup({ isOpen, onClose, username, type }: FollowersPopupProps) {
+export default function FollowersPopup({ isOpen, onClose, username, type, onStatsChange }: FollowersPopupProps) {
 	const [users, setUsers] = useState<PopupUserItem[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [query, setQuery] = useState("");
@@ -76,6 +77,21 @@ export default function FollowersPopup({ isOpen, onClose, username, type }: Foll
 		);
 	}, [users, query]);
 
+	const handleFollowChange = (userId: number, isFollowing: boolean) => {
+		setUsers(prevUsers => {
+			if (type === "following" && !isFollowing) {
+				const newUsers = prevUsers.filter(user => user.id !== userId);
+				onStatsChange?.(type, newUsers.length);
+				return newUsers;
+			}
+			return prevUsers.map(user => 
+				user.id === userId 
+					? { ...user, isFollowing } 
+					: user
+			);
+		});
+	};
+
 	if (!isOpen) return null;
 
 	return (
@@ -114,7 +130,7 @@ export default function FollowersPopup({ isOpen, onClose, username, type }: Foll
 						/>
 					</div>
 
-					<div className="max-h-80 overflow-y-auto divide-y">
+					<div className="max-h-80 overflow-y-auto space-y-2">
 						{loading ? (
 							<div className="py-8 text-center text-gray-500">Đang tải...</div>
 						) : filtered.length === 0 ? (
@@ -131,6 +147,7 @@ export default function FollowersPopup({ isOpen, onClose, username, type }: Foll
 										isFollowing={Boolean(u.isFollowing)}
 										currentUserId={currentUser?.id}
 										className="w-full"
+										onFollowChange={(isFollowing) => handleFollowChange(u.id, isFollowing)}
 									/>
 								</div>
 							))
@@ -141,5 +158,3 @@ export default function FollowersPopup({ isOpen, onClose, username, type }: Foll
 		</div>
 	);
 }
-
-

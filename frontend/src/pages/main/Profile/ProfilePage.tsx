@@ -103,6 +103,16 @@ export default function ProfilePage() {
     }
   };
 
+  const handleStatsChange = (type: 'followers' | 'following', count: number) => {
+    setUserStats(prevStats => {
+      if (!prevStats) return prevStats;
+      return {
+        ...prevStats,
+        [type]: { count }
+      };
+    });
+  };
+
   const handleMessage = async (targetUsername: string) => {
     if (!currentUser) {
       showInfo("Vui lòng đăng nhập để thực hiện thao tác này", {
@@ -221,6 +231,7 @@ export default function ProfilePage() {
               onEditProfile={() => setIsEditModalOpen(true)}
               onMessage={handleMessage}
               onTabChange={setActiveTab}
+              onStatsChange={handleStatsChange}
             />
             {renderActiveTab()}
           </div>
