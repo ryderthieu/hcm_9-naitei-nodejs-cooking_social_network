@@ -11,6 +11,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
     RecipesModule,
     MessagesModule,
     CloudinaryModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}
