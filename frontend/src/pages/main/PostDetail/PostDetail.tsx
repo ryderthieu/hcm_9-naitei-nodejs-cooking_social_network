@@ -9,11 +9,7 @@ import {
 } from "../../../services/post.service";
 import { AlertPopup } from "../../../components/popup";
 import { useAlertPopup } from "../../../hooks/useAlertPopup";
-import {
-  getPreviewImage,
-  showErrorAlert,
-  showSuccessAlert,
-} from "../../../utils/utils";
+import { getPreviewImage } from "../../../utils/utils";
 import { useAuth } from "../../../contexts/AuthContext";
 import UserHeader from "../../../components/common/user/UserHeader";
 import MediaCarousel from "../../../components/common/media/MediaCarousel";
@@ -257,6 +253,17 @@ export default function PostDetail() {
           }}
         />
       </div>
+      <AlertPopup
+        isOpen={alert.isOpen}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        confirmText={alert.confirmText}
+        showCancel={alert.showCancel}
+        cancelText={alert.cancelText}
+        onConfirm={alert.onConfirm}
+        onClose={closeAlert}
+      />
       <AlertPopup
         isOpen={alert.isOpen}
         type={alert.type}

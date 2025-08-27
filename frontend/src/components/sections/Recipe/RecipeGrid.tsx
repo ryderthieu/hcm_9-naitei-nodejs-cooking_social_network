@@ -3,11 +3,15 @@ import RecipeCard from "./RecipeCard";
 import { recipesService } from "../../../services/recipe.service";
 import type { QueryRecipesDto } from "../../../types/recipe.type";
 import { MealType, Cuisine } from "../../../utils/enumMaps";
+import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
 
 interface CategoryDto {
   mealType?: MealType;
   cuisine?: Cuisine;
 }
+
 interface Recipe {
   id?: number;
   _id?: string;
@@ -22,9 +26,18 @@ interface Recipe {
 interface RecipeGridProps {
   title: string;
   initialQuery?: QueryRecipesDto;
+  currentUser: string;
 }
 
-const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
+const RecipeGrid: React.FC<RecipeGridProps> = ({
+  title,
+  initialQuery,
+  currentUser,
+}) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const currentUsername = user?.username ?? "";
+
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [page, setPage] = useState(1);
   const [showLoadMore, setShowLoadMore] = useState(false);
@@ -63,17 +76,31 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
       setShowLoadMore(currentPage * limit < total);
     } catch (error: any) {
       console.error("Lỗi tải công thức:", error?.message || error);
+      setErrorMessage(error?.message || "Đã xảy ra lỗi khi tải công thức.");
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchRecipes(1);
   }, [initialQuery]);
+
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
     fetchRecipes(nextPage);
+  };
+
+  const handleDelete = async (id: number | string) => {
+    try {
+      await recipesService.deleteRecipe(Number(id));
+      setRecipes((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+      alert("Xóa thành công!");
+    } catch (err: any) {
+      console.error("Xóa thất bại:", err);
+      alert("Xóa thất bại: " + (err.message || err));
+    }
   };
 
   return (
@@ -82,11 +109,13 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
         <h1 className="font-bold text-2xl text-gray-800 mb-2">{title}</h1>
         <div className="w-16 h-1 bg-gradient-to-br from-orange-500 to-amber-500 mb-6"></div>
       </div>
+
       {errorMessage && (
         <div className="text-center py-12 text-red-500">
           <p>{errorMessage}</p>
         </div>
       )}
+
       {!errorMessage && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
@@ -99,10 +128,15 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
                 title={recipe.title}
                 time={recipe.time}
                 author={recipe.author}
-                isFavorite={recipe.isFavorite}
+                currentUser={currentUsername}
+                onEdit={() => {
+                  navigate(`/edit-recipe/${recipe.id ?? recipe._id}`);
+                }}
+                onDelete={() => handleDelete(recipe.id ?? recipe._id ?? 0)}
               />
             ))}
           </div>
+
           {showLoadMore && (
             <div className="flex justify-center mt-8">
               <button
@@ -114,6 +148,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
               </button>
             </div>
           )}
+
           {recipes.length === 0 && !loading && (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">
@@ -123,6 +158,16 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ title, initialQuery }) => {
           )}
         </>
       )}
+
+      <div className="flex justify-end mt-8">
+        <button
+          className="bg-pink-500 hover:bg-pink-600 text-white font-semibold py-4 px-6 rounded-full flex items-center gap-2 shadow-lg z-100 cursor-pointer"
+          onClick={() => navigate("/create-recipe")}
+        >
+          <Plus size={20} />
+          <span>Tạo công thức mới</span>
+        </button>
+      </div>
     </div>
   );
 };

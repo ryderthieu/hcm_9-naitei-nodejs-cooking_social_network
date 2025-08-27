@@ -1,4 +1,5 @@
-import { Clock, Heart, MoreVertical } from "lucide-react";
+import { useState } from "react";
+import { Clock, MoreVertical } from "lucide-react";
 import {
   MealTypeMap,
   CuisineMap,
@@ -11,6 +12,7 @@ interface CategoryDto {
   mealType?: MealType;
   cuisine?: Cuisine;
 }
+
 interface RecipeCardProps {
   id: number;
   image: string | string[];
@@ -18,7 +20,9 @@ interface RecipeCardProps {
   title: string;
   time: string;
   author: string;
-  isFavorite?: boolean;
+  currentUser: string;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
 const RecipeCard = ({
@@ -28,10 +32,16 @@ const RecipeCard = ({
   title,
   time,
   author,
-  isFavorite = false,
+  currentUser,
+  onEdit,
+  onDelete,
 }: RecipeCardProps) => {
   const navigate = useNavigate();
   const displayImage = Array.isArray(image) ? image[0] : image;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const isOwner =
+    author?.trim().toLowerCase() === currentUser?.trim().toLowerCase();
 
   return (
     <div className="w-[300px] bg-white rounded-2xl overflow-hidden shadow hover:shadow-lg transition-all duration-300">
@@ -41,6 +51,7 @@ const RecipeCard = ({
           alt={title}
           className="w-full h-full object-cover"
         />
+
         <div className="absolute top-3 left-3 flex gap-2">
           {category?.mealType && (
             <span className="bg-amber-50 text-orange-600 font-semibold text-xs px-3 py-1 rounded-full shadow">
@@ -53,16 +64,35 @@ const RecipeCard = ({
             </span>
           )}
         </div>
-        <button className="absolute top-3 right-10 bg-white rounded-full p-1 shadow hover:scale-110 transition">
-          <Heart
-            className={`w-4 h-4 ${
-              isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
-            }`}
-          />
-        </button>
-        <button className="absolute top-3 right-3 bg-white rounded-full p-1 shadow hover:scale-110 transition">
-          <MoreVertical className="w-4 h-4 text-gray-600" />
-        </button>
+
+        {isOwner && (
+          <>
+            <button
+              className="absolute top-3 right-3 bg-white rounded-full p-1 shadow hover:scale-110 transition"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <MoreVertical className="w-4 h-4 text-gray-600 cursor-pointer" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute top-10 right-3 bg-white rounded shadow py-1 w-28 flex flex-col z-10">
+                <button
+                  className="text-left px-3 hover:bg-gray-100 text-sm font-semibold py-2 cursor-pointer"
+                  onClick={onEdit}
+                >
+                  Chỉnh sửa
+                </button>
+                <button
+                  className="text-left px-3 hover:bg-gray-100 text-sm text-red-500 font-semibold py-2 cursor-pointer"
+                  onClick={onDelete}
+                >
+                  Xóa
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="absolute bottom-3 right-3 bg-white text-xs px-2 py-1 rounded-full shadow">
           <span className="text-orange-600 font-semibold">{author}</span>
         </div>

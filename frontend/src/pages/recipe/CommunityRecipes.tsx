@@ -8,7 +8,7 @@ const CommunityRecipes = () => {
       <CarouselPlugin />
       <div className="mx-[124px] my-4">
         <AllBlogs />
-        <RecipeGrid title="Công thức nổi bật" />
+        <RecipeGrid title="Công thức nổi bật" currentUser={""} />
       </div>
     </div>
   );

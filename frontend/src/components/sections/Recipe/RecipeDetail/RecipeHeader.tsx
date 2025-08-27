@@ -1,4 +1,3 @@
-import { useState } from "react";
 import StarRating from "./StarRating";
 
 interface RecipeHeaderProps {
@@ -6,8 +5,6 @@ interface RecipeHeaderProps {
 }
 
 export default function RecipeHeader({ recipe }: RecipeHeaderProps) {
-  const [showCollectionDropdown, setShowCollectionDropdown] = useState(false);
-
   const formatCookingTime = (time: number) => {
     if (time >= 60) {
       const hours = Math.floor(time / 60);

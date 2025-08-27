@@ -19,9 +19,11 @@ import Blog3 from "../pages/blog/Blog3";
 import Blog4 from "../pages/blog/Blog4";
 import AccountPage from "../pages/main/Account/AccountPage";
 import ProfilePage from "../pages/main/Profile/ProfilePage";
-import DetailRecipe from "../pages/recipe/DetailRecipe";
 import PostDetail from "../pages/main/PostDetail/PostDetail";
 import SearchPage from "../pages/main/SearchPage/SearchPage";
+import SupportPage from "../pages/support/SupportPage";
+import EditRecipeForm from "../pages/recipe/EditRecipe";
+import DetailRecipe from "../pages/recipe/DetailRecipe";
 
 export default function AppRouter() {
   return (
@@ -159,6 +161,33 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <SearchPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/edit-recipe/:id"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <EditRecipeForm />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/search"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SearchPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/support"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <SupportPage />
           </MainLayout>
         }
       />
