@@ -25,6 +25,7 @@ import SupportPage from "../pages/support/SupportPage";
 import EditRecipeForm from "../pages/recipe/EditRecipe";
 import DetailRecipe from "../pages/recipe/DetailRecipe";
 import NotificationPage from "../pages/main/Notification/Notification";
+import AboutPage from "../pages/main/About/AboutPage";
 
 export default function AppRouter() {
   return (
@@ -198,6 +199,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <NotificationPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/about"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <AboutPage />
           </MainLayout>
         }
       />
