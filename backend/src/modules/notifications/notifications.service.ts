@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { User } from '@prisma/client';
@@ -7,10 +12,15 @@ import {
   LIMIT_DEFAULT,
   PAGE_DEFAULT,
 } from 'src/common/constants/pagination.constants';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private notificationsGateway: NotificationsGateway,
+  ) {}
 
   async createNotification(
     userId: number,
@@ -142,5 +152,13 @@ export class NotificationsService {
     });
 
     return { message: 'All notifications marked as read' };
+  }
+
+  async sendNotification(senderId: number, dto: CreateNotificationDto) {
+    const { notification } = await this.createNotification(senderId, dto);
+    this.notificationsGateway.server
+      .to(`user_${dto.receiver}`)
+      .emit('new_notification', { notification });
+    return { notification };
   }
 }

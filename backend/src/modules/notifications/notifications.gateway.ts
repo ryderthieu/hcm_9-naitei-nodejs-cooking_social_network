@@ -12,6 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { NotificationsService } from './notifications.service';
 import { JWT_SECRET } from 'src/common/constants/jwt.constant';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @WebSocketGateway({
   namespace: '/notifications',
@@ -25,6 +26,7 @@ export class NotificationsGateway
 
   constructor(
     private jwtService: JwtService,
+    @Inject(forwardRef(() => NotificationsService))
     private notificationsService: NotificationsService,
   ) {}
 

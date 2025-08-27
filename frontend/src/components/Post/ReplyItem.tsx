@@ -62,7 +62,7 @@ export default function ReplyItem({
   onReplyToReply,
   onLikeReply,
   onDeleteReply,
-  currentUser
+  currentUser,
 }: ReplyItemProps) {
   const navigate = useNavigate();
   const { showError } = useAlertPopup();
@@ -78,18 +78,19 @@ export default function ReplyItem({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const canModify = isOwner || isPostOwner;
 
-
-
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -175,7 +176,7 @@ export default function ReplyItem({
   const indentClass = depth === 0 ? "" : `ml-${Math.min(depth * 8, 32)}`;
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 ${className}`} id={`comment-${_id}`}>
       <div className={`flex items-start gap-3 ${indentClass}`}>
         <div className="flex-shrink-0 pt-1">
           <img
@@ -190,7 +191,13 @@ export default function ReplyItem({
               <div className="flex-1">
                 <div className="mb-1">
                   <UserHeader
-                    user={{ id: user.id, firstName: user.firstName, lastName: user.lastName, avatar: user.avatar, username: user.username }}
+                    user={{
+                      id: user.id,
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      avatar: user.avatar,
+                      username: user.username,
+                    }}
                     size="md"
                     showTimestamp={false}
                     showUsername={false}
@@ -218,7 +225,7 @@ export default function ReplyItem({
                         <div className="absolute top-full left-0 mt-2 z-10">
                           <EmojiPicker
                             onEmojiClick={(emojiObject) => {
-                              setEditText(prev => prev + emojiObject.emoji);
+                              setEditText((prev) => prev + emojiObject.emoji);
                               setShowEmojiPicker(false);
                             }}
                             width={250}
@@ -271,8 +278,18 @@ export default function ReplyItem({
                             setShowDropdown(false);
                           }}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
                           </svg>
                           Sửa bình luận
                         </button>
@@ -284,12 +301,24 @@ export default function ReplyItem({
                           try {
                             await onDelete();
                           } catch (error) {
-                            showError("Thao tác đã thất bại. Vui lòng thử lại!");
+                            showError(
+                              "Thao tác đã thất bại. Vui lòng thử lại!"
+                            );
                           }
                         }}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Xóa bình luận
                       </button>
@@ -314,7 +343,9 @@ export default function ReplyItem({
                 <FaReply className="w-4 h-4" />
                 <span>Trả lời</span>
               </button>
-              <span className="text-gray-400">{timeAgoVi(created_at.toString())}</span>
+              <span className="text-gray-400">
+                {timeAgoVi(created_at.toString())}
+              </span>
             </div>
           </div>
 
@@ -339,7 +370,8 @@ export default function ReplyItem({
                 onClick={() => setShowNestedReplies(!showNestedReplies)}
                 className="text-xs text-blue-600 hover:text-blue-700"
               >
-                {showNestedReplies ? "Ẩn" : "Xem tất cả"} {replies.length} phản hồi
+                {showNestedReplies ? "Ẩn" : "Xem tất cả"} {replies.length} phản
+                hồi
               </button>
             </div>
           )}
@@ -357,14 +389,19 @@ export default function ReplyItem({
               created_at={nestedReply.created_at}
               likes_count={nestedReply.likes_count}
               liked_by_me={nestedReply.liked_by_me ?? false}
-              isOwner={currentUser && Number(currentUser.id) === Number(nestedReply.user.id)}
+              isOwner={
+                currentUser &&
+                Number(currentUser.id) === Number(nestedReply.user.id)
+              }
               isPostOwner={false}
               onLikeToggle={() => handleLikeNestedReply(nestedReply.id)}
-                             onEdit={async (newText: string) => {
-                 await onReplyToReply?.(nestedReply.id, newText);
-               }}
-                             onDelete={() => handleDeleteNestedReply(nestedReply.id)}
-               onReply={(replyText: string) => handleNestedReply(nestedReply.id, replyText)}
+              onEdit={async (newText: string) => {
+                await onReplyToReply?.(nestedReply.id, newText);
+              }}
+              onDelete={() => handleDeleteNestedReply(nestedReply.id)}
+              onReply={(replyText: string) =>
+                handleNestedReply(nestedReply.id, replyText)
+              }
               depth={depth + 1}
               replies={nestedReply.replies || []}
               onLoadReplies={onLoadReplies}

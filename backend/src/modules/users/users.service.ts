@@ -14,6 +14,8 @@ import {
 } from '../../common/dto/user-responses.dto';
 import { PasswordValidator } from '../../common/utils/password-validator.util';
 import { User } from '.prisma/client/default';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const USER_SELECT_FIELDS = {
   id: true,
@@ -41,7 +43,11 @@ const USER_SELECT_FIELDS = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsGateway: NotificationsGateway,
+  ) {}
 
   private createUserResponseDto(user: any): UserResponseDto {
     return new UserResponseDto(user);
@@ -292,6 +298,12 @@ export class UsersService {
         followerId: currentUser.id,
         followingId: targetUser.id,
       },
+    });
+
+    await this.notificationsService.sendNotification(currentUser.id, {
+      receiver: targetUser.id,
+      content: 'đã theo dõi bạn',
+      url: `/profile/${currentUser.username}`,
     });
 
     return { message: `Successfully followed ${targetUser.username}` };

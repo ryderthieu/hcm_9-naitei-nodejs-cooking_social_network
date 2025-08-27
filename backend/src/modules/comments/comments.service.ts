@@ -16,6 +16,8 @@ import {
   SortBy,
 } from 'src/common/constants/pagination.constants';
 import { PostComment, User } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 type PostCommentWithUser = PostComment & {
   user: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar' | 'username'>;
@@ -23,7 +25,11 @@ type PostCommentWithUser = PostComment & {
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsGateway: NotificationsGateway,
+  ) {}
 
   async createComment(
     userId: number,
@@ -53,7 +59,13 @@ export class CommentsService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            username: true,
+          },
         },
       },
     });
@@ -68,6 +80,30 @@ export class CommentsService {
         where: { id: parentCommentId },
         data: { repliesCount: { increment: 1 } },
       });
+    }
+
+    const postAuthor = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true, id: true },
+    });
+    if (postAuthor) {
+      const receiverId = parentCommentId
+        ? ((
+            await this.prisma.postComment.findUnique({
+              where: { id: parentCommentId },
+              select: { userId: true },
+            })
+          )?.userId ?? postAuthor.authorId)
+        : postAuthor.authorId;
+      if (receiverId && receiverId !== userId) {
+        await this.notificationsService.sendNotification(userId, {
+          receiver: receiverId,
+          content: parentCommentId
+            ? 'đã trả lời bình luận của bạn'
+            : 'đã bình luận về bài viết của bạn',
+          url: `/post/${postId}?commentId=${comment.id}`,
+        });
+      }
     }
 
     return { comment: this.mapComment(comment) };
@@ -95,7 +131,13 @@ export class CommentsService {
       data: { comment: updateCommentDto.comment },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            username: true,
+          },
         },
       },
     });
@@ -159,7 +201,13 @@ export class CommentsService {
       where: { id: commentId },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            username: true,
+          },
         },
       },
     });
@@ -168,11 +216,17 @@ export class CommentsService {
     if (comment.postId !== postId)
       throw new BadRequestException('Invalid post');
 
-    const liked_by_me = await this.getLikedByMeMap(currentUser?.id, [comment.id]);
+    const liked_by_me = await this.getLikedByMeMap(currentUser?.id, [
+      comment.id,
+    ]);
     return { comment: this.mapComment(comment, liked_by_me[comment.id]) };
   }
 
-  async getComments(postId: number, query: FilterCommentsDto, currentUser?: User) {
+  async getComments(
+    postId: number,
+    query: FilterCommentsDto,
+    currentUser?: User,
+  ) {
     const sortBy = query.sortBy ?? SortBy.NEWEST;
     const page = query.page ?? PAGE_DEFAULT;
     const limit = query.limit ?? LIMIT_DEFAULT;
@@ -189,15 +243,24 @@ export class CommentsService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              username: true,
+            },
           },
         },
       }),
     ]);
 
-    const likedMap = await this.getLikedByMeMap(currentUser?.id, comments.map(c => c.id));
+    const likedMap = await this.getLikedByMeMap(
+      currentUser?.id,
+      comments.map((c) => c.id),
+    );
     return {
-      comments: comments.map(c => this.mapComment(c, likedMap[c.id])),
+      comments: comments.map((c) => this.mapComment(c, likedMap[c.id])),
       meta: { total, page, limit },
     };
   }
@@ -231,15 +294,24 @@ export class CommentsService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              username: true,
+            },
           },
         },
       }),
     ]);
 
-    const likedMap = await this.getLikedByMeMap(currentUser?.id, replies.map(r => r.id));
+    const likedMap = await this.getLikedByMeMap(
+      currentUser?.id,
+      replies.map((r) => r.id),
+    );
     return {
-      replies: replies.map(r => this.mapComment(r, likedMap[r.id])),
+      replies: replies.map((r) => this.mapComment(r, likedMap[r.id])),
       meta: { total, page, limit },
     };
   }
@@ -267,7 +339,17 @@ export class CommentsService {
         }),
       ]);
     } catch (error) {
-      throw new InternalServerErrorException('Unable to like the comment. Try again later!');
+      throw new InternalServerErrorException(
+        'Unable to like the comment. Try again later!',
+      );
+    }
+
+    if (comment.userId !== userId) {
+      await this.notificationsService.sendNotification(userId, {
+        receiver: comment.userId,
+        content: 'đã thích bình luận của bạn',
+        url: `/post/${postId}?commentId=${commentId}`,
+      });
     }
 
     return { message: 'Comment liked' };
@@ -297,7 +379,9 @@ export class CommentsService {
         }),
       ]);
     } catch (error) {
-      throw new InternalServerErrorException('Unable to unlike the comment. Try again later!');
+      throw new InternalServerErrorException(
+        'Unable to unlike the comment. Try again later!',
+      );
     }
 
     return { message: 'Comment unliked' };
@@ -332,9 +416,12 @@ export class CommentsService {
       where: { userId, commentId: { in: ids } },
       select: { commentId: true },
     });
-    return likes.reduce((acc, l) => {
-      acc[l.commentId] = true;
-      return acc;
-    }, {} as Record<number, boolean>);
+    return likes.reduce(
+      (acc, l) => {
+        acc[l.commentId] = true;
+        return acc;
+      },
+      {} as Record<number, boolean>,
+    );
   }
 }
