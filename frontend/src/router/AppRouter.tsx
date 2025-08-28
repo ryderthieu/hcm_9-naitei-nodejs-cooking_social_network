@@ -24,6 +24,7 @@ import SearchPage from "../pages/main/SearchPage/SearchPage";
 import SupportPage from "../pages/support/SupportPage";
 import EditRecipeForm from "../pages/recipe/EditRecipe";
 import DetailRecipe from "../pages/recipe/DetailRecipe";
+import NotificationPage from "../pages/main/Notification/Notification";
 
 export default function AppRouter() {
   return (
@@ -156,7 +157,7 @@ export default function AppRouter() {
         }
       />
 
-      <Route 
+      <Route
         path="/search"
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
@@ -188,6 +189,15 @@ export default function AppRouter() {
         element={
           <MainLayout header={<Header />} footer={<Footer />}>
             <SupportPage />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <MainLayout header={<Header />} footer={<Footer />}>
+            <NotificationPage />
           </MainLayout>
         }
       />

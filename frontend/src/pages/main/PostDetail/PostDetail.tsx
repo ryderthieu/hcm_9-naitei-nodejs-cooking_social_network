@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { getPostById } from "../../../services/post.service";
 import {
   likePost,
@@ -20,6 +20,7 @@ import type { PostEntity } from "../../../types/post.type";
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { alert, showError, showInfo, closeAlert } = useAlertPopup();
@@ -49,6 +50,22 @@ export default function PostDetail() {
 
     fetchPost();
   }, [id]);
+
+  useEffect(() => {
+    const cid = searchParams.get("commentId");
+    if (!cid) return;
+    const timeout = setTimeout(() => {
+      const el = document.getElementById(`comment-${cid}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-yellow-400", "rounded-md");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-yellow-400", "rounded-md");
+        }, 2000);
+      }
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchParams, post]);
 
   const handleLike = async () => {
     if (!post) return;

@@ -1,11 +1,12 @@
+import { Transform } from 'class-transformer';
 import { IsNumber, IsOptional } from 'class-validator';
 
 export class GetNotificationsDto {
-  @IsNumber()
+  @Transform(({ value }) => Number(value))
   @IsOptional()
   page?: number;
 
-  @IsNumber()
+  @Transform(({ value }) => Number(value))
   @IsOptional()
   limit?: number;
 }

@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { MediaType, Post, Recipe, PostMedia, User } from '@prisma/client';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { FilterPostsDto } from './dto/filter-posts.dto';
@@ -76,7 +78,11 @@ type MultiplePostResponse = {
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsGateway: NotificationsGateway,
+  ) {}
 
   async createPost(
     userId: number,
@@ -178,7 +184,12 @@ export class PostsService {
           select: { postId: true },
         }),
         this.prisma.relationship.findUnique({
-          where: { followerId_followingId: { followerId: currentUser.id, followingId: post.authorId } },
+          where: {
+            followerId_followingId: {
+              followerId: currentUser.id,
+              followingId: post.authorId,
+            },
+          },
           select: { followingId: true },
         }),
         this.prisma.userSavedPost.findUnique({
@@ -196,10 +207,22 @@ export class PostsService {
       where: { postId: post.id },
     });
 
-    return this.mapPostToResponse(post, likedByMe, followingAuthor, savedByMe, savesCount);
+    return this.mapPostToResponse(
+      post,
+      likedByMe,
+      followingAuthor,
+      savedByMe,
+      savesCount,
+    );
   }
 
-  private mapPostToResponse(post: PostWithIncludes, likedByMe?: boolean, followingAuthor?: boolean, savedByMe?: boolean, savesCount?: number): PostResponse {
+  private mapPostToResponse(
+    post: PostWithIncludes,
+    likedByMe?: boolean,
+    followingAuthor?: boolean,
+    savedByMe?: boolean,
+    savesCount?: number,
+  ): PostResponse {
     const result: PostResponse['post'] = {
       id: post.id,
       author: {
@@ -325,10 +348,13 @@ export class PostsService {
         where: { userId, postId: { in: posts.map((p) => p.id) } },
         select: { postId: true },
       });
-      likedMap = likes.reduce((acc, l) => {
-        acc[l.postId] = true;
-        return acc;
-      }, {} as Record<number, boolean>);
+      likedMap = likes.reduce(
+        (acc, l) => {
+          acc[l.postId] = true;
+          return acc;
+        },
+        {} as Record<number, boolean>,
+      );
 
       const authorIds = [...new Set(posts.map((p) => p.authorId))];
       const following = await this.prisma.relationship.findMany({
@@ -345,10 +371,13 @@ export class PostsService {
         where: { userId, postId: { in: posts.map((p) => p.id) } },
         select: { postId: true },
       });
-      savedMap = saved.reduce((acc, s) => {
-        acc[s.postId] = true;
-        return acc;
-      }, {} as Record<number, boolean>);
+      savedMap = saved.reduce(
+        (acc, s) => {
+          acc[s.postId] = true;
+          return acc;
+        },
+        {} as Record<number, boolean>,
+      );
     }
 
     const savesCountMap: Record<number, number> = {};
@@ -364,14 +393,15 @@ export class PostsService {
     }
 
     return {
-      posts: posts.map((post) =>
-        this.mapPostToResponse(
-          post,
-          likedMap[post.id],
-          followingMap[post.id],
-          savedMap[post.id],
-          savesCountMap[post.id] ?? 0
-        ).post
+      posts: posts.map(
+        (post) =>
+          this.mapPostToResponse(
+            post,
+            likedMap[post.id],
+            followingMap[post.id],
+            savedMap[post.id],
+            savesCountMap[post.id] ?? 0,
+          ).post,
       ),
       meta: { total, page, limit },
     };
@@ -393,7 +423,7 @@ export class PostsService {
 
       if (updatePostdto.media.length > 0) {
         await this.prisma.postMedia.createMany({
-          data: updatePostdto.media.map(media => ({
+          data: updatePostdto.media.map((media) => ({
             postId,
             url: media.url,
             type: media.type,
@@ -406,7 +436,10 @@ export class PostsService {
       caption: updatePostdto.caption ?? post.caption,
     };
 
-    if (updatePostdto.recipeId !== undefined && updatePostdto.recipeId !== null) {
+    if (
+      updatePostdto.recipeId !== undefined &&
+      updatePostdto.recipeId !== null
+    ) {
       updateData.recipeId = updatePostdto.recipeId;
     }
 
@@ -417,7 +450,13 @@ export class PostsService {
         media: true,
         recipe: { select: { id: true, title: true, slug: true } },
         author: {
-          select: { id: true, firstName: true, lastName: true, avatar: true, username: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            username: true,
+          },
         },
       },
     });
@@ -451,6 +490,15 @@ export class PostsService {
       where: { id: postId },
       data: { likesCount: { increment: 1 } },
     });
+
+    if (post.authorId !== userId) {
+      await this.notificationsService.sendNotification(userId, {
+        receiver: post.authorId,
+        content: 'đã thích bài viết của bạn',
+        url: `/post/${post.id}`,
+      });
+    }
+
     return { message: 'Post liked' };
   }
 
@@ -483,6 +531,14 @@ export class PostsService {
         where: { id: postId },
         data: { sharesCount: { increment: 1 } },
       });
+
+      if (post.authorId !== userId) {
+        await this.notificationsService.sendNotification(userId, {
+          receiver: post.authorId,
+          content: 'đã chia sẻ bài viết của bạn',
+          url: `/post/${post.id}`,
+        });
+      }
       return { message: 'Post shared', sharesCount: updatedPost.sharesCount };
     } catch (error: any) {
       if (error.code === 'P2002') {
@@ -490,6 +546,13 @@ export class PostsService {
           where: { id: postId },
           data: { sharesCount: { increment: 1 } },
         });
+        if (post.authorId !== userId) {
+          await this.notificationsService.sendNotification(userId, {
+            receiver: post.authorId,
+            content: 'đã chia sẻ bài viết của bạn',
+            url: `/post/${post.id}`,
+          });
+        }
         return { message: 'Post shared', sharesCount: updatedPost.sharesCount };
       }
       throw error;
