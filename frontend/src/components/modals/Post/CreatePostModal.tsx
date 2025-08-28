@@ -7,6 +7,7 @@ import {
   User,
   Settings,
   ChefHat,
+  Smile,
 } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { createPost } from "../../../services/post.service";
@@ -15,6 +16,7 @@ import { toast } from "react-toastify";
 import type { Recipe } from "../../../types/recipe.type";
 import { uploadFiles, type UploadResult } from "../../../services/upload.service";
 import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
+import EmojiPicker from "emoji-picker-react";
 
 
 interface MediaItem {
@@ -46,6 +48,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isShowIconPicker, setIsShowIconPicker] = useState(false);
 
 
   useEffect(() => {
@@ -117,6 +120,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     const timeoutId = setTimeout(searchRecipesDebounced, 500);
     return () => clearTimeout(timeoutId);
   }, [recipeSearch, recipeTab, user?.username]);
+
+  const handleEmojiSelect = (emoji: string) => {
+    setContent(prevContent => prevContent + emoji);
+    setIsShowIconPicker(false);
+  };
 
   const renderUploadProgress = () => {
     if (!isLoading || uploadProgress === 0) return null;
@@ -258,13 +266,45 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               </div>
             </div>
 
+            <div className="relative">
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Bạn đang nghĩ gì?"
+                className="w-full h-32 p-4 border border-gray-200 rounded-xl mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-gray-400 pr-10"
+              />
+              <div className="absolute right-4 top-4">
+                <button
+                  className="text-gray-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-gray-200 transition-colors"
+                  onClick={() => setIsShowIconPicker(!isShowIconPicker)}
+                >
+                  <Smile size={20} />
+                </button>
 
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={"Bạn đang nghĩ gì?"}
-              className="w-full h-32 p-4 border border-gray-200 rounded-xl mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-gray-400"
-            />
+                {isShowIconPicker && (
+                  <>
+                    <div
+                      className="fixed inset-0 bg-transparent z-50"
+                      onClick={() => setIsShowIconPicker(false)}
+                    />
+                    <div className="absolute z-50 top-full right-0 mt-2">
+                      <div className="bg-white border rounded-lg shadow-2xl">
+                        <EmojiPicker
+                          onEmojiClick={(data) => handleEmojiSelect(data.emoji)}
+                          width={300}
+                          height={400}
+                          searchDisabled={false}
+                          skinTonesDisabled={true}
+                          previewConfig={{
+                            showPreview: false,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
             
             {selectedRecipes.length > 0 && (
