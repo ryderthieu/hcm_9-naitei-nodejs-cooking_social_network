@@ -63,17 +63,13 @@ const CategoryModal = ({
   const getCategoryGroupEmoji = (key: string) => {
     const emojiMap: Record<string, string> = {
       mealType: "🍽️",
-      by_meal: "🍽️",
       cuisine: "🌍",
-      by_cuisine: "🌍",
       cookingMethod: "👨‍🍳",
-      by_method: "👨‍🍳",
       mainIngredients: "🥬",
-      by_ingredient: "🥬",
       dietaryPreferences: "🥗",
-      by_diet: "🥗",
       occasions: "🎉",
-      by_occasion: "🎉",
+      timeBased: "⏰",
+      difficultyLevel: "📊",
       default: "📂",
     };
     return emojiMap[key] || emojiMap.default;
@@ -82,11 +78,14 @@ const CategoryModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4">
       <div className="fixed inset-0 w-full h-full" onClick={onClose}></div>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden relative z-10 animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-scroll no-scrollbar relative z-10 animate-in fade-in duration-200">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div>
             <h3 className="text-xl font-bold text-gray-800">{title}</h3>
             <p className="text-sm text-gray-600 mt-1">{description}</p>
+            <p className="text-xs text-amber-600 mt-1">
+              💡 Mỗi loại danh mục chỉ có thể chọn một giá trị
+            </p>
           </div>
           <button
             type="button"
@@ -148,13 +147,25 @@ const CategoryModal = ({
                     (id) => id === category._id
                   );
 
+                  const hasOtherSelected = selectedCategories.some((id) => {
+                    if (id === category._id) return false;
+                    return categories.some(
+                      (group) =>
+                        group.key === categoryGroup.key &&
+                        group.items.some((item) => item._id === id)
+                    );
+                  });
+
                   return (
                     <button
                       key={category._id}
                       type="button"
+                      disabled={hasOtherSelected && !isSelected}
                       className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 border-2 hover:shadow-md ${
                         isSelected
                           ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-lg scale-105"
+                          : hasOtherSelected && !isSelected
+                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                           : "bg-white text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50"
                       }`}
                       onClick={() => onToggleCategory(category)}
