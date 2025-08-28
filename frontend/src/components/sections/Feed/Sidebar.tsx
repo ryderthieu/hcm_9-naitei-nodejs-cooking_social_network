@@ -84,7 +84,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
         <button
           onClick={onAdd}
-          className="mt-6 w-full bg-[#FF6363] text-white py-3 rounded-xl font-semibold hover:bg-[#ff4f4f] transition flex items-center justify-center gap-2"
+          className="mt-6 w-full bg-[#FF6363] text-white py-3 rounded-xl font-semibold hover:bg-[#ff4f4f] transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <FaPlus /> Tạo bài viết mới
         </button>
