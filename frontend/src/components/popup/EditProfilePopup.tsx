@@ -5,6 +5,7 @@ import type { UserProfile } from "../../types/user.type";
 import { updateUserProfile } from "../../services/user.service";
 import { uploadFiles } from "../../services/upload.service";
 import { AlertPopup } from "./index";
+import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 import { useAlertPopup } from "../../hooks/useAlertPopup";
 
 interface EditProfilePopupProps {
@@ -97,7 +98,7 @@ export default function EditProfilePopup({ isOpen, onClose, initialUser, onUpdat
           <div className="flex items-center gap-4">
             <div className="relative">
               <img
-                src={formData.avatar || "/src/assets/avatar-default.svg"}
+                src={formData.avatar || DEFAULT_AVATAR_URL}
                 alt="avatar"
                 className="w-24 h-24 rounded-full object-cover border"
               />

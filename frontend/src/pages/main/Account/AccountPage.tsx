@@ -6,7 +6,7 @@ import { uploadFiles } from "../../../services/upload.service";
 import { forgotPassword, resetPassword, verifyOtp } from "../../../services/auth.service";
 import { AlertPopup } from "../../../components/popup";
 import { useAlertPopup } from "../../../hooks/useAlertPopup";
-import defaultAvatar from "../../../assets/avatar-default.svg";
+import { DEFAULT_AVATAR_URL } from "../../../constants/constants";
 
 export default function AccountPage() {
   useAuth();
@@ -179,7 +179,7 @@ export default function AccountPage() {
             <div className="w-full h-[180px] rounded-2xl bg-gradient-to-r from-amber-200 via-orange-200 to-yellow-200 shadow-md"></div>
             <div>
               <img
-                src={form.avatar || defaultAvatar}
+                src={form.avatar || DEFAULT_AVATAR_URL}
                 className="bg-white rounded-full w-[120px] h-[120px] absolute bottom-[-60px] left-[50px] border-4 border-white object-cover shadow-lg"
                 alt="avatar"
               />

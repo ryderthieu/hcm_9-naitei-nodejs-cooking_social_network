@@ -15,6 +15,7 @@ import RecipeSelectionModal from "./RecipeSelectionModal";
 import type { RecipeListItem } from "../../services/recipe.service";
 import { uploadFiles } from "../../services/upload.service";
 import { getAccessToken } from "../../services/api.service";
+import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 
 interface EditPostPopupProps {
   post: PostEntity;
@@ -250,7 +251,7 @@ export default function EditPostPopup({
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br rounded-full overflow-hidden">
                   <img
-                    src={post.author.avatar || "/src/assets/avatar-default.svg"}
+                    src={post.author.avatar || DEFAULT_AVATAR_URL}
                     alt="avatar"
                     className="w-full h-full object-cover"
                   />
