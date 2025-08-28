@@ -42,10 +42,10 @@ const Header = () => {
     const path = location.pathname;
     if (path === "/") {
       setActive(0);
-    } else if (path.startsWith("/")) {
-      setActive(1);
     } else if (path.startsWith("/community-recipes")) {
-      setActive(2);
+      setActive(1);
+    } else if (path.startsWith("/about")) {
+    setActive(2);
     } else if (path.startsWith("/support")) {
       setActive(3);
     } else if (path.startsWith("/search")) {
