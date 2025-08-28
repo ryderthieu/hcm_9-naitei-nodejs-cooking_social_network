@@ -1,31 +1,64 @@
 import React, { useState, useEffect } from "react";
-import { FaSearch, FaNewspaper, FaBook, FaUser, FaFilter } from "react-icons/fa";
+import {
+  FaSearch,
+  FaNewspaper,
+  FaBook,
+  FaUser,
+  FaFilter,
+} from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { searchUsers } from "../../../services/user.service";
 import type { User } from "../../../types/auth.type";
 import { PostList } from "../../../components/Post";
 import RecipeGrid from "../../../components/sections/Recipe/RecipeGrid";
 import UserCard from "../../../components/common/user/UserCard";
+import {
+  MealTypeMap,
+  CuisineMap,
+  OccasionsMap,
+  DietaryPreferencesMap,
+  MainIngredientsMap,
+  CookingMethodMap,
+  TimeBasedMap,
+  DifficultyLevelMap,
+  MealType,
+  Cuisine,
+  Occasions,
+  DietaryPreferences,
+  MainIngredients,
+  CookingMethod,
+  TimeBased,
+  DifficultyLevel,
+} from "../../../utils/enumMaps";
 
 const CONST = {
-  NEWEST: 'newest',
-  OLDEST: 'oldest',
-  FOLLOWED: 'followed'
-}
+  NEWEST: "newest",
+  OLDEST: "oldest",
+  FOLLOWED: "followed",
+};
 
 const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [pageSearchQuery, setPageSearchQuery] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<"posts" | "recipes" | "users">("posts");
+  const [activeFilter, setActiveFilter] = useState<
+    "posts" | "recipes" | "users"
+  >("posts");
 
   const navigate = useNavigate();
   const location = useLocation();
 
   const [postSort, setPostSort] = useState<string>(CONST.NEWEST);
-  const [postFilterFollow, setPostFilterFollow] = useState<string>('all');
-  const [recipeIngredient, setRecipeIngredient] = useState<string>('all');
-  const [recipeTime, setRecipeTime] = useState<string>('all');
-  const [recipeDifficulty, setRecipeDifficulty] = useState<string>('all');
+  const [postFilterFollow, setPostFilterFollow] = useState<string>("all");
+  const [recipeIngredient, setRecipeIngredient] = useState<string>("all");
+  const [recipeTime, setRecipeTime] = useState<string>("all");
+  const [recipeDifficulty, setRecipeDifficulty] = useState<string>("all");
+
+  const [recipeMealType, setRecipeMealType] = useState<string>("all");
+  const [recipeCuisine, setRecipeCuisine] = useState<string>("all");
+  const [recipeOccasions, setRecipeOccasions] = useState<string>("all");
+  const [recipeDietaryPreferences, setRecipeDietaryPreferences] =
+    useState<string>("all");
+  const [recipeCookingMethod, setRecipeCookingMethod] = useState<string>("all");
 
   const [userResult, setUserResult] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -34,18 +67,26 @@ const SearchPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const queryFromUrl = params.get("q") || "";
-    const filterFromUrl = (params.get("filter") as "posts" | "recipes" | "users") || "posts";
+    const filterFromUrl =
+      (params.get("filter") as "posts" | "recipes" | "users") || "posts";
 
     setSearchQuery(queryFromUrl);
     setPageSearchQuery(queryFromUrl);
     setActiveFilter(filterFromUrl);
 
-    setPostSort(params.get('postSort') || CONST.NEWEST);
-    setPostFilterFollow(params.get('postFilterFollow') || 'all');
-    setRecipeIngredient(params.get('recipeIngredient') || 'all');
-    setRecipeTime(params.get('recipeTime') || 'all');
-    setRecipeDifficulty(params.get('recipeDifficulty') || 'all');
+    setPostSort(params.get("postSort") || CONST.NEWEST);
+    setPostFilterFollow(params.get("postFilterFollow") || "all");
+    setRecipeIngredient(params.get("recipeIngredient") || "all");
+    setRecipeTime(params.get("recipeTime") || "all");
+    setRecipeDifficulty(params.get("recipeDifficulty") || "all");
 
+    setRecipeMealType(params.get("recipeMealType") || "all");
+    setRecipeCuisine(params.get("recipeCuisine") || "all");
+    setRecipeOccasions(params.get("recipeOccasions") || "all");
+    setRecipeDietaryPreferences(
+      params.get("recipeDietaryPreferences") || "all"
+    );
+    setRecipeCookingMethod(params.get("recipeCookingMethod") || "all");
   }, [location.search]);
 
   useEffect(() => {
@@ -64,7 +105,6 @@ const SearchPage: React.FC = () => {
         const userData = await searchUsers(searchQuery);
         setUserResult(userData);
       } catch (err: any) {
-        console.error("Search API error:", err);
         setError(err.message || "Đã có lỗi xảy ra khi tìm kiếm.");
         setUserResult([]);
       } finally {
@@ -92,32 +132,108 @@ const SearchPage: React.FC = () => {
     updateUrlParams({ q: pageSearchQuery });
   };
 
-  const handleActiveFilterChange = (newFilter: "posts" | "recipes" | "users") => {
+  const handleActiveFilterChange = (
+    newFilter: "posts" | "recipes" | "users"
+  ) => {
     updateUrlParams({ filter: newFilter, q: searchQuery });
   };
 
   const handlePostSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateUrlParams({ postSort: e.target.value, filter: 'posts', q: searchQuery });
+    updateUrlParams({
+      postSort: e.target.value,
+      filter: "posts",
+      q: searchQuery,
+    });
   };
 
   const handlePostFilterFollowChange = (postFilterFollow: string) => {
-    updateUrlParams({ postFilterFollow: postFilterFollow, filter: 'posts', q: searchQuery });
+    updateUrlParams({
+      postFilterFollow: postFilterFollow,
+      filter: "posts",
+      q: searchQuery,
+    });
   };
 
-  const handleRecipeIngredientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateUrlParams({ recipeIngredient: e.target.value, filter: 'recipes', q: searchQuery });
+  const handleRecipeIngredientChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeIngredient: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
   };
 
   const handleRecipeTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateUrlParams({ recipeTime: e.target.value, filter: 'recipes', q: searchQuery });
+    updateUrlParams({
+      recipeTime: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
   };
 
-  const handleRecipeDifficultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateUrlParams({ recipeDifficulty: e.target.value, filter: 'recipes', q: searchQuery });
+  const handleRecipeDifficultyChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeDifficulty: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
+  };
+
+  const handleRecipeMealTypeChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeMealType: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
+  };
+
+  const handleRecipeCuisineChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeCuisine: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
+  };
+
+  const handleRecipeOccasionsChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeOccasions: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
+  };
+
+  const handleRecipeDietaryPreferencesChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeDietaryPreferences: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
+  };
+
+  const handleRecipeCookingMethodChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    updateUrlParams({
+      recipeCookingMethod: e.target.value,
+      filter: "recipes",
+      q: searchQuery,
+    });
   };
 
   const renderSidebarSubFilter = () => {
-    if (activeFilter === 'posts') {
+    if (activeFilter === "posts") {
       return (
         <div className="mt-3 space-y-2 pl-2">
           <select
@@ -132,12 +248,12 @@ const SearchPage: React.FC = () => {
           <button
             className={`px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
               postFilterFollow === CONST.FOLLOWED
-                ? 'bg-[#FFB800] text-white border-[#FFB800]'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                ? "bg-[#FFB800] text-white border-[#FFB800]"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
             }`}
             onClick={() =>
               handlePostFilterFollowChange(
-                postFilterFollow === CONST.FOLLOWED ? 'all' : CONST.FOLLOWED
+                postFilterFollow === CONST.FOLLOWED ? "all" : CONST.FOLLOWED
               )
             }
           >
@@ -147,20 +263,85 @@ const SearchPage: React.FC = () => {
       );
     }
 
-    if (activeFilter === 'recipes') {
+    if (activeFilter === "recipes") {
       return (
         <div className="mt-3 space-y-2 pl-2">
+          <select
+            value={recipeMealType}
+            onChange={handleRecipeMealTypeChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Bữa ăn</option>
+            {Object.entries(MealTypeMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={recipeCuisine}
+            onChange={handleRecipeCuisineChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Ẩm thực</option>
+            {Object.entries(CuisineMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={recipeOccasions}
+            onChange={handleRecipeOccasionsChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Dịp đặc biệt</option>
+            {Object.entries(OccasionsMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={recipeDietaryPreferences}
+            onChange={handleRecipeDietaryPreferencesChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Chế độ ăn</option>
+            {Object.entries(DietaryPreferencesMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
+          </select>
+
           <select
             value={recipeIngredient}
             onChange={handleRecipeIngredientChange}
             className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
           >
-            <option value="all">Nguyên liệu</option>
-            <option value="BEEF">Thịt bò</option>
-            <option value="CHICKEN">Thịt gà</option>
-            <option value="SEAFOOD">Cá</option>
-            <option value="EGG">Trứng</option>
-            <option value="VEGETABLES">Rau củ</option>
+            <option value="all">Nguyên liệu chính</option>
+            {Object.entries(MainIngredientsMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={recipeCookingMethod}
+            onChange={handleRecipeCookingMethodChange}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
+          >
+            <option value="all">Phương pháp nấu</option>
+            {Object.entries(CookingMethodMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
           </select>
 
           <select
@@ -168,10 +349,12 @@ const SearchPage: React.FC = () => {
             onChange={handleRecipeTimeChange}
             className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800] mb-2"
           >
-            <option value="all">Thời gian</option>
-            <option value="UNDER_15_MIN">Dưới 15 phút</option>
-            <option value="MIN_15_TO_30">15-30 phút</option>
-            <option value="OVER_1_HOUR">Trên 60 phút</option>
+            <option value="all">Thời gian nấu</option>
+            {Object.entries(TimeBasedMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
           </select>
 
           <select
@@ -180,9 +363,11 @@ const SearchPage: React.FC = () => {
             className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-[#FFB800] focus:border-[#FFB800]"
           >
             <option value="all">Độ khó</option>
-            <option value="EASY">Dễ</option>
-            <option value="MEDIUM">Trung bình</option>
-            <option value="HARD">Khó</option>
+            {Object.entries(DifficultyLevelMap).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
           </select>
         </div>
       );
@@ -194,8 +379,7 @@ const SearchPage: React.FC = () => {
   const renderResults = () => {
     if (loading)
       return <p className="text-center text-gray-600">Đang tải kết quả...</p>;
-    if (error)
-      return <p className="text-center text-red-500">Lỗi: {error}</p>;
+    if (error) return <p className="text-center text-red-500">Lỗi: {error}</p>;
     if (!searchQuery)
       return (
         <p className="text-center text-gray-500">
@@ -205,11 +389,15 @@ const SearchPage: React.FC = () => {
 
     switch (activeFilter) {
       case "posts":
-        return <PostList filter={{ 
-          keyword: searchQuery, 
-          sortBy: postSort === CONST.OLDEST ? 'oldest' : 'newest',
-          following: postFilterFollow === CONST.FOLLOWED ? true : undefined
-        }} />;
+        return (
+          <PostList
+            filter={{
+              keyword: searchQuery,
+              sortBy: postSort === CONST.OLDEST ? "oldest" : "newest",
+              following: postFilterFollow === CONST.FOLLOWED ? true : undefined,
+            }}
+          />
+        );
 
       case "recipes":
         return (
@@ -221,12 +409,30 @@ const SearchPage: React.FC = () => {
               [&>div>div]:md:gap-8
             "
           >
-            <RecipeGrid title="" currentUser="" initialQuery={{ 
-              name: searchQuery,
-              mainIngredient: recipeIngredient !== 'all' ? recipeIngredient : undefined,
-              timeBased: recipeTime !== 'all' ? recipeTime : undefined,
-              level: recipeDifficulty !== 'all' ? recipeDifficulty : undefined
-            }} />
+            <RecipeGrid
+              title=""
+              currentUser=""
+              initialQuery={{
+                name: searchQuery,
+                mealType: recipeMealType !== "all" ? recipeMealType : undefined,
+                cuisine: recipeCuisine !== "all" ? recipeCuisine : undefined,
+                occasions:
+                  recipeOccasions !== "all" ? recipeOccasions : undefined,
+                dietaryPreferences:
+                  recipeDietaryPreferences !== "all"
+                    ? recipeDietaryPreferences
+                    : undefined,
+                mainIngredient:
+                  recipeIngredient !== "all" ? recipeIngredient : undefined,
+                cookingMethod:
+                  recipeCookingMethod !== "all"
+                    ? recipeCookingMethod
+                    : undefined,
+                timeBased: recipeTime !== "all" ? recipeTime : undefined,
+                level:
+                  recipeDifficulty !== "all" ? recipeDifficulty : undefined,
+              }}
+            />
           </div>
         );
 
@@ -293,12 +499,12 @@ const SearchPage: React.FC = () => {
             <div className="w-full md:w-72 flex-shrink-0">
               <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24 border border-gray-100">
                 <div className="flex items-center gap-2 mb-6">
-                  <button
-                    className="text-gray-500"
-                  >
+                  <button className="text-gray-500">
                     <FaFilter size={20} />
                   </button>
-                  <h2 className="text-xl font-semibold text-gray-800">Bộ lọc</h2>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Bộ lọc
+                  </h2>
                 </div>
                 <div className="space-y-3">
                   <button
@@ -312,7 +518,7 @@ const SearchPage: React.FC = () => {
                     <FaNewspaper size={20} />
                     <span>Bài viết</span>
                   </button>
-                  {activeFilter === 'posts' && renderSidebarSubFilter()}
+                  {activeFilter === "posts" && renderSidebarSubFilter()}
                   <button
                     onClick={() => handleActiveFilterChange("recipes")}
                     className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
@@ -324,7 +530,7 @@ const SearchPage: React.FC = () => {
                     <FaBook size={20} />
                     <span>Công thức</span>
                   </button>
-                  {activeFilter === 'recipes' && renderSidebarSubFilter()}
+                  {activeFilter === "recipes" && renderSidebarSubFilter()}
                   <button
                     onClick={() => handleActiveFilterChange("users")}
                     className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
