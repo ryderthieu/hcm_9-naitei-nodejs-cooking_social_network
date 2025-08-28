@@ -1,103 +1,227 @@
-import { Bell, Heart, MessageCircle, Share2, UserPlus } from "lucide-react";
-import { useState, useRef, type JSX } from "react";
+import { Bell } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
+import {
+  getNotifications,
+  markAllAsRead,
+} from "../../services/notification.service";
+import { getAccessToken } from "../../services/api.service";
+import { API_CONSTANTS, DEFAULT_AVATAR_URL } from "../../constants/constants";
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
+
+type NotificationItem = {
+  id: number;
+  content: string | null;
+  url?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  senderUser?: {
+    id: number;
+    firstName?: string | null;
+    lastName?: string | null;
+    username: string;
+    avatar?: string | null;
+  } | null;
+};
 
 export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const [notifications, setNotifications] = useState([]);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
 
-  interface Notification {
-    _id: string;
-    type: "like" | "comment" | "share" | "follow" | string;
-    isRead: boolean;
-    sender?: {
-      _id: string;
-      firstName: string;
-      lastName: string;
-      avatar?: string;
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await getNotifications({ page: 1, limit: 10 });
+        const items: NotificationItem[] = res.notifications || [];
+        setNotifications(items);
+        setUnreadCount(items.filter((n) => !n.isRead).length);
+      } catch {}
     };
-    postId?: string;
-    videoId?: string;
-    message?: string;
-    createdAt: string;
-  }
+    load();
 
-  type NotificationType = Notification["type"];
-
-  const getNotificationIcon = (type: NotificationType): JSX.Element => {
-    switch (type) {
-      case "like":
-        return <Heart className="w-5 h-5 text-red-500" />;
-      case "comment":
-        return <MessageCircle className="w-5 h-5 text-blue-500" />;
-      case "share":
-        return <Share2 className="w-5 h-5 text-green-500" />;
-      case "follow":
-        return <UserPlus className="w-5 h-5 text-purple-500" />;
-      default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+    const apiBase = API_CONSTANTS.BASE_URL;
+    const socketBase = apiBase.replace(/\/api$/, "");
+    const token = getAccessToken();
+    if (token) {
+      const socket = io(`${socketBase}/notifications`, {
+        transports: ["websocket"],
+        auth: { token },
+      });
+      socketRef.current = socket;
+      socket.on("new_notification", (payload: any) => {
+        const notif: NotificationItem = payload?.notification || payload;
+        if (!notif) return;
+        setNotifications((prev) => [notif, ...prev.slice(0, 9)]);
+        setUnreadCount((c) => c + 1);
+      });
     }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off("new_notification");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {}
   };
 
   return (
-    <div ref={dropdownRef} className="relative inline-block text-left">
+    <div
+      ref={dropdownRef}
+      className="relative inline-block text-left hover:cursor-pointer"
+    >
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-full hover:bg-gray-100 border border-gray-600 hover:border-gray-700 transition-colors duration-200"
+        className="group relative p-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-gray-200/60 hover:border-gray-300/80 hover:bg-white/90 transition-all duration-300 ease-out hover:shadow-lg hover:shadow-gray-200/50 hover:-translate-y-0.5 hover:cursor-pointer"
       >
-        <Bell className="w-6 h-6 text-gray-600" strokeWidth={1.5} />
+        <Bell
+          className="w-5 h-5 text-gray-700 group-hover:text-gray-900 transition-colors duration-200"
+          strokeWidth={1.8}
+        />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">
-            {unreadCount}
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-xs font-semibold shadow-lg animate-pulse">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-7 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
-          <div className="p-4 border-b border-gray-100 font-semibold text-gray-800 flex justify-between items-center">
-            <span className="text-[16px]">Thông báo</span>
-            {unreadCount > 0 && (
-              <button className="text-sm text-blue-500 hover:text-blue-600">
-                Đánh dấu đã đọc
-              </button>
-            )}
-          </div>
-          <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                Không có thông báo nào
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <div>
-                  <img
-                    src={"https://via.placeholder.com/150"}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="text-sm text-gray-700">
-                    <p className="text-xs text-gray-400"></p>
-                  </div>
+        <>
+          <div
+            className="fixed inset-0 z-40 hover:cursor-pointer"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="absolute right-0 mt-2 w-[420px] bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-3xl shadow-2xl shadow-gray-900/10 z-50 animate-in slide-in-from-top-2 duration-200">
+            <div className="p-6 border-b border-gray-100/80">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+                    Thông báo
+                  </h3>
                 </div>
-              ))
-            )}
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50/80 hover:bg-blue-100/80 rounded-full transition-all duration-200 hover:scale-105"
+                  >
+                    Đánh dấu đã đọc
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center">
+                    <Bell className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-gray-500 font-medium">
+                    Không có thông báo nào
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Các thông báo mới sẽ hiển thị ở đây
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100/50">
+                  {notifications.map((n, index) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        setOpen(false);
+                        if (n.url) navigate(n.url);
+                      }}
+                      className={`w-full flex items-start gap-4 p-5 hover:bg-gray-50/80 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm hover:cursor-pointer ${
+                        !n.isRead
+                          ? "bg-gradient-to-r from-blue-50/50 to-purple-50/30 border-l-4 border-blue-400"
+                          : "hover:translate-x-1"
+                      }`}
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                      }}
+                    >
+                      <div
+                        className={`relative flex-shrink-0 ${
+                          !n.isRead
+                            ? "ring-2 ring-blue-400/30 ring-offset-2 rounded-full"
+                            : ""
+                        }`}
+                      >
+                        <img
+                          src={n.senderUser?.avatar || DEFAULT_AVATAR_URL}
+                          alt="avatar"
+                          className="w-12 h-12 rounded-full object-cover shadow-sm"
+                        />
+                        {!n.isRead && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-sm"></div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="text-sm leading-relaxed">
+                            <span
+                              className={`font-semibold ${
+                                !n.isRead ? "text-gray-900" : "text-gray-800"
+                              }`}
+                            >
+                              {`${n.senderUser?.firstName || ""} ${
+                                n.senderUser?.lastName || ""
+                              }`.trim() ||
+                                n.senderUser?.username ||
+                                "Ai đó"}
+                            </span>{" "}
+                            <span className="text-gray-600 font-medium">
+                              {n.content || "Có thông báo mới"}
+                            </span>
+                          </p>
+                          {!n.isRead && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">
+                          {formatDistanceToNow(new Date(n.createdAt), {
+                            addSuffix: true,
+                            locale: vi,
+                          })}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-100/80 bg-gray-50/30">
+              <button
+                onClick={() => {
+                  navigate("/notifications");
+                  setOpen(false);
+                }}
+                className="w-full py-3 text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-200 hover:scale-105 hover:cursor-pointer"
+              >
+                Xem tất cả thông báo
+              </button>
+            </div>
           </div>
-          <div className="p-4 text-center border-t">
-            <button
-              onClick={() => {
-                navigate("/notification");
-                setOpen(false);
-              }}
-              className="text-sm text-[#FF6363] font-semibold hover:text-[#fa5555]"
-            >
-              Xem tất cả thông báo
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

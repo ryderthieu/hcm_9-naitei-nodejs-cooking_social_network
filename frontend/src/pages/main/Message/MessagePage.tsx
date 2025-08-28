@@ -828,7 +828,7 @@ export default function MessagePage() {
       reactions: [],
       seenBy: [],
     };
-    setMessages((prev) => [tempMessage, ...prev]);
+    setMessages((prev) => [...prev, tempMessage]);
 
     const payload = {
       conversationId: Number(selectedConversationId),

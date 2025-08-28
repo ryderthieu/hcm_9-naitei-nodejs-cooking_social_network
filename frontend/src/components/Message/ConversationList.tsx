@@ -5,6 +5,7 @@ import type { Conversation, Member } from "../../types/conversation.type";
 import { GroupAvatar } from "./GroupAvatar";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 import { timeAgoVi } from "../../utils/timeUtils";
+import logo from "../../assets/logo.svg";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -43,7 +44,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full ">
       <div className="p-4 border-b border-gray-200">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-semibold text-gray-800">Tin nhắn</h1>
+          <button
+            className="p-2  rounded-full transition-colors hover:cursor-pointer"
+            onClick={() => navigate("/")}
+          >
+            <img src={logo} alt="Oshisha" className="h-7 w-auto" />
+          </button>
           <button
             className="p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
             onClick={onAddConversation}
