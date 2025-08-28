@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import {
   getNotifications,
   markAllAsRead,
+  markAsRead,
 } from "../../services/notification.service";
 import { getAccessToken } from "../../services/api.service";
 import { API_CONSTANTS, DEFAULT_AVATAR_URL } from "../../constants/constants";
@@ -79,6 +80,33 @@ export default function NotificationDropdown() {
     } catch {}
   };
 
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    try {
+      if (!notification.isRead) {
+        await markAsRead(notification.id);
+
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n
+          )
+        );
+
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      setOpen(false);
+      if (notification.url) {
+        navigate(notification.url);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      setOpen(false);
+      if (notification.url) {
+        navigate(notification.url);
+      }
+    }
+  };
+
   return (
     <div
       ref={dropdownRef}
@@ -144,10 +172,7 @@ export default function NotificationDropdown() {
                   {notifications.map((n, index) => (
                     <button
                       key={n.id}
-                      onClick={() => {
-                        setOpen(false);
-                        if (n.url) navigate(n.url);
-                      }}
+                      onClick={() => handleNotificationClick(n)}
                       className={`w-full flex items-start gap-4 p-5 hover:bg-gray-50/80 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm hover:cursor-pointer ${
                         !n.isRead
                           ? "bg-gradient-to-r from-blue-50/50 to-purple-50/30 border-l-4 border-blue-400"
