@@ -26,14 +26,9 @@ const Footer = () => {
               Trang chủ
             </p>
           </a>
-          <a href="/recipes">
+          <a href="/community-recipes">
             <p className="pt-4 hover:text-white text-[#FFFFFF] text-opacity-50">
               Công thức
-            </p>
-          </a>
-          <a href="/explore/posts">
-            <p className="pt-4 hover:text-white text-[#FFFFFF] text-opacity-50">
-              Lướt tin
             </p>
           </a>
           <a href="/about">
@@ -65,28 +60,10 @@ const Footer = () => {
         <div>
           <h1 className="text-[20px] font-bold">Hỗ trợ</h1>
           <a
-            href="/support/huong-dan"
+            href="/support"
             className="block pt-4 text-[#FFFFFF] text-opacity-50 hover:text-white"
           >
-            Hướng dẫn sử dụng
-          </a>
-          <a
-            href="/support/dieu-kien"
-            className="block pt-4 text-[#FFFFFF] text-opacity-50 hover:text-white"
-          >
-            Điều kiện & điều khoản
-          </a>
-          <a
-            href="/support/cau-hoi"
-            className="block pt-4 text-[#FFFFFF] text-opacity-50 hover:text-white"
-          >
-            Câu hỏi thường gặp
-          </a>
-          <a
-            href="/support/lien-he"
-            className="block pt-4 text-[#FFFFFF] text-opacity-50 hover:text-white"
-          >
-            Liên hệ
+            Điều khoản dịch vụ
           </a>
         </div>
       </div>
