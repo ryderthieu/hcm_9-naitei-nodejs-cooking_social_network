@@ -9,6 +9,8 @@ import InstructionsSection from "../../components/sections/Recipe/RecipeDetail/I
 import { recipesService } from "../../services/recipe.service";
 import { calculateNutrition } from "../../utils/recipeUtils";
 import { useAuth } from "../../contexts/AuthContext";
+import { AlertPopup } from "../../components/popup";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 
 interface RecipeDetailProps {
   className?: string;
@@ -17,6 +19,7 @@ interface RecipeDetailProps {
 export default function RecipeDetail({ className }: RecipeDetailProps) {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { alert, showError, closeAlert } = useAlertPopup();
   const [recipe, setRecipe] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [servings, setServings] = useState(1);
@@ -38,6 +41,7 @@ export default function RecipeDetail({ className }: RecipeDetailProps) {
         setServings(recipeData?.servings || 1);
       } catch (err) {
         setError("Failed to load recipe");
+        showError("Không thể tải công thức");
         console.error("Error fetching recipe:", err);
       }
     };
@@ -87,29 +91,32 @@ export default function RecipeDetail({ className }: RecipeDetailProps) {
   }
 
   return (
-    <div className={`max-w-7xl mx-auto bg-white ${className || ""}`}>
-      <RecipeHeader recipe={recipe} />
+    <>
+      <AlertPopup {...alert} onClose={closeAlert} />
+      <div className={`max-w-7xl mx-auto bg-white ${className || ""}`}>
+        <RecipeHeader recipe={recipe} />
 
-      <div className="flex flex-col lg:flex-row gap-8 mb-8">
-        <RecipeImageSection recipe={recipe} />
-        <NutritionPanel calculatedNutrition={calculatedNutrition} />
-      </div>
+        <div className="flex flex-col lg:flex-row gap-8 mb-8">
+          <RecipeImageSection recipe={recipe} />
+          <NutritionPanel calculatedNutrition={calculatedNutrition} />
+        </div>
 
-      <p className="text-gray-600 mb-8 text-base leading-relaxed">
-        {recipe?.description || "No description available."}
-      </p>
+        <p className="text-gray-600 mb-8 text-base leading-relaxed">
+          {recipe?.description || "No description available."}
+        </p>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-2/3">
-          <IngredientsSection
-            recipe={recipe}
-            servings={servings}
-            setServings={setServings}
-          />
-          <InstructionsSection recipe={recipe} />
-          <RatingSection recipeId={recipe.id} />
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-2/3">
+            <IngredientsSection
+              recipe={recipe}
+              servings={servings}
+              setServings={setServings}
+            />
+            <InstructionsSection recipe={recipe} />
+            <RatingSection recipeId={recipe.id} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

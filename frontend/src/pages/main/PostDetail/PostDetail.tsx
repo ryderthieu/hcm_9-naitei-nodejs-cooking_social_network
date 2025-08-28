@@ -281,17 +281,6 @@ export default function PostDetail() {
         onConfirm={alert.onConfirm}
         onClose={closeAlert}
       />
-      <AlertPopup
-        isOpen={alert.isOpen}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        confirmText={alert.confirmText}
-        showCancel={alert.showCancel}
-        cancelText={alert.cancelText}
-        onConfirm={alert.onConfirm}
-        onClose={closeAlert}
-      />
     </>
   );
 }
