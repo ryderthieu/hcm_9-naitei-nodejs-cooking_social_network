@@ -12,7 +12,7 @@ export class NotificationsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async getNotifications(
-    @CurrentUser() currentUser: User,
+    @CurrentUser('user') currentUser: User,
     @Query() getNotificationsDto: GetNotificationsDto,
   ) {
     return this.notificationsService.getNotifications(
