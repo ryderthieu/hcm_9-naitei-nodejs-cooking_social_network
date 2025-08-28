@@ -6,6 +6,8 @@ import { MealType, Cuisine } from "../../../utils/enumMaps";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import { AlertPopup } from "../../../components/popup";
+import { useAlertPopup } from "../../../hooks/useAlertPopup";
 
 interface CategoryDto {
   mealType?: MealType;
@@ -36,6 +38,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const currentUsername = user?.username ?? "";
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -76,7 +79,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
       setShowLoadMore(currentPage * limit < total);
     } catch (error: any) {
       console.error("Lỗi tải công thức:", error?.message || error);
-      setErrorMessage(error?.message || "Đã xảy ra lỗi khi tải công thức.");
+      showError(error?.message || "Đã xảy ra lỗi khi tải công thức.");
     } finally {
       setLoading(false);
     }
@@ -96,19 +99,21 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
     try {
       await recipesService.deleteRecipe(Number(id));
       setRecipes((prev) => prev.filter((r) => r.id !== id && r._id !== id));
-      alert("Xóa thành công!");
+      showSuccess("Xóa thành công!");
     } catch (err: any) {
       console.error("Xóa thất bại:", err);
-      alert("Xóa thất bại: " + (err.message || err));
+      showError("Xóa thất bại: " + (err.message || err));
     }
   };
 
   return (
-    <div className="container mx-auto mb-8">
-      <div className="mb-8">
-        <h1 className="font-bold text-2xl text-gray-800 mb-2">{title}</h1>
-        <div className="w-16 h-1 bg-gradient-to-br from-orange-500 to-amber-500 mb-6"></div>
-      </div>
+    <>
+      <AlertPopup {...alert} onClose={closeAlert} />
+      <div className="container mx-auto mb-8">
+        <div className="mb-8">
+          <h1 className="font-bold text-2xl text-gray-800 mb-2">{title}</h1>
+          <div className="w-16 h-1 bg-gradient-to-br from-orange-500 to-amber-500 mb-6"></div>
+        </div>
 
       {errorMessage && (
         <div className="text-center py-12 text-red-500">
@@ -169,6 +174,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };
 

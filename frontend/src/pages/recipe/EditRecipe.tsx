@@ -15,7 +15,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { recipesService } from "../../services/recipe.service";
 import { ingredientService } from "../../services/ingredient.service";
 import { uploadFiles } from "../../services/upload.service";
-import { showErrorAlert, showSuccessAlert } from "../../utils/errorHandler";
+import { AlertPopup } from "../../components/popup";
+import { useAlertPopup } from "../../hooks/useAlertPopup";
 import CategoryModal from "../../components/modals/Recipe/CategoryModal";
 import type {
   UpdateRecipeDto,
@@ -33,6 +34,7 @@ const generateUniqueId = () => `id_${Math.random().toString(36).substr(2, 9)}`;
 export default function EditRecipeForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
 
   const { id } = useParams<{ id: string }>();
 
@@ -142,7 +144,7 @@ export default function EditRecipeForm() {
         setUploadedImages([result[0].url]);
       }
     } catch (error) {
-      showErrorAlert(error, "Không thể upload ảnh");
+      showError("Không thể upload ảnh");
     }
   };
 
@@ -166,7 +168,7 @@ export default function EditRecipeForm() {
         return next;
       });
     } catch (error) {
-      showErrorAlert(error, "Không thể upload ảnh");
+      showError("Không thể upload ảnh");
     }
   };
 
@@ -237,7 +239,7 @@ export default function EditRecipeForm() {
         const recipe = res;
 
         if (!recipe) {
-          showErrorAlert(null, "Không tìm thấy công thức");
+          showError("Không tìm thấy công thức");
           return;
         }
 
@@ -280,7 +282,7 @@ export default function EditRecipeForm() {
           recipe.categories?.mealType ? [recipe.categories.mealType] : []
         );
       } catch (err) {
-        showErrorAlert(err, "Không thể tải dữ liệu công thức");
+        showError("Không thể tải dữ liệu công thức");
       }
     };
 
@@ -290,19 +292,19 @@ export default function EditRecipeForm() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user) {
-      showErrorAlert(null, "Vui lòng đăng nhập để chỉnh sửa công thức");
+      showError("Vui lòng đăng nhập để chỉnh sửa công thức");
       return;
     }
     if (!recipeName.trim() || !description.trim()) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ tên và mô tả món ăn");
+      showError("Vui lòng điền đầy đủ tên và mô tả món ăn");
       return;
     }
     if (ingredients.some((ing) => !ing.name.trim() || !ing.amount.trim())) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ thông tin nguyên liệu");
+      showError("Vui lòng điền đầy đủ thông tin nguyên liệu");
       return;
     }
     if (steps.some((s) => !s.detail.trim())) {
-      showErrorAlert(null, "Vui lòng điền đầy đủ các bước thực hiện");
+      showError("Vui lòng điền đầy đủ các bước thực hiện");
       return;
     }
 
@@ -360,7 +362,7 @@ export default function EditRecipeForm() {
                 }
               } catch {}
             }
-            showErrorAlert(e, `Không thể tạo nguyên liệu: ${ing.name}`);
+            showError(`Không thể tạo nguyên liệu: ${ing.name}`);
             return;
           }
         }
@@ -386,22 +388,25 @@ export default function EditRecipeForm() {
       };
 
       if (!id) {
-        showErrorAlert(null, "Không tìm thấy ID công thức để cập nhật");
+        showError("Không tìm thấy ID công thức để cập nhật");
         return;
       }
 
       const resp = await recipesService.updateRecipe(Number(id), recipeData);
-      showSuccessAlert("Cập nhật công thức thành công!");
-      navigate(`/detail-recipe/${resp.recipe.id}`);
+      showSuccess("Cập nhật công thức thành công!", {
+        onConfirm: () => navigate(`/detail-recipe/${resp.recipe.id}`)
+      });
     } catch (error) {
-      showErrorAlert(error, "Không thể cập nhật công thức");
+      showError("Không thể cập nhật công thức");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <>
+      <AlertPopup {...alert} onClose={closeAlert} />
+      <div className="max-w-7xl mx-auto">
       <div className="py-10">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 text-gray-900 leading-tight">
           Chỉnh sửa công thức
@@ -977,5 +982,6 @@ export default function EditRecipeForm() {
         </form>
       </div>
     </div>
+    </>
   );
 }
