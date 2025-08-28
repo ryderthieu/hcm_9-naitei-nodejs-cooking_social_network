@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Minus,
@@ -18,14 +18,25 @@ import { uploadFiles } from "../../services/upload.service";
 import { AlertPopup } from "../../components/popup";
 import { useAlertPopup } from "../../hooks/useAlertPopup";
 import CategoryModal from "../../components/modals/Recipe/CategoryModal";
-import type { CreateRecipeDto, IngredientDto, StepDto, ImageDto, UtensilDto, IngredientListItem, FormIngredient, FormStep } from "../../types/recipe.type";
+import { getRecipeCategories } from "../../utils/enumMaps";
+import type {
+  CreateRecipeDto,
+  IngredientDto,
+  StepDto,
+  ImageDto,
+  UtensilDto,
+  IngredientListItem,
+  FormIngredient,
+  FormStep,
+} from "../../types/recipe.type";
 
 const generateUniqueId = () => `id_${Math.random().toString(36).substr(2, 9)}`;
 
 export default function CreateRecipeForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { alert, showError, showSuccess, showInfo, closeAlert } = useAlertPopup();
+  const { alert, showError, showSuccess, showInfo, closeAlert } =
+    useAlertPopup();
 
   const [recipeName, setRecipeName] = useState("");
   const [description, setDescription] = useState("");
@@ -40,21 +51,36 @@ export default function CreateRecipeForm() {
       ingredientId: null,
     },
   ]);
-  const [ingredientSuggestions, setIngredientSuggestions] = useState<IngredientListItem[]>([]);
+  const [ingredientSuggestions, setIngredientSuggestions] = useState<
+    IngredientListItem[]
+  >([]);
   const [activeIngredientIndex, setActiveIngredientIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
   const [steps, setSteps] = useState<FormStep[]>([
-    { id: generateUniqueId(), summary: "", detail: "", time: "", images: [] as string[] },
+    {
+      id: generateUniqueId(),
+      summary: "",
+      detail: "",
+      time: "",
+      images: [] as string[],
+    },
   ]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibleCategoryCount] = useState(5);
-  const [categories, setCategories] = useState<{ key: string; name: string; items: { _id: string; name: string }[] }[]>([]);
+  const [categories, setCategories] = useState<
+    { key: string; name: string; items: { _id: string; name: string }[] }[]
+  >([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [units, setUnits] = useState<string[]>([]);
-  const [ingredientSearchTimeout, setIngredientSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [ingredientSearchTimeout, setIngredientSearchTimeout] =
+    useState<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setCategories(getRecipeCategories());
+  }, []);
 
   const STANDARD_UNIT_OPTIONS = [
     "g",
@@ -69,14 +95,20 @@ export default function CreateRecipeForm() {
     "muỗng",
   ].map((u) => ({ value: u, label: u }));
 
-  const getDynamicIngredientUnits = (currentIngredient: { unit: string; ingredientId: number | null }) => {
+  const getDynamicIngredientUnits = (currentIngredient: {
+    unit: string;
+    ingredientId: number | null;
+  }) => {
     const base = [...STANDARD_UNIT_OPTIONS];
     if (
       currentIngredient?.unit &&
       currentIngredient.ingredientId &&
       !base.some((opt) => opt.value === currentIngredient.unit)
     ) {
-      return [{ value: currentIngredient.unit, label: currentIngredient.unit }, ...base];
+      return [
+        { value: currentIngredient.unit, label: currentIngredient.unit },
+        ...base,
+      ];
     }
     return base;
   };
@@ -96,15 +128,9 @@ export default function CreateRecipeForm() {
     return categoryName;
   };
 
-  const toggleCategory = (category: { _id: string; name: string }) => {
-    setSelectedCategories((prev: any) =>
-      prev.includes(category._id)
-        ? prev.filter((id: string) => id !== category._id)
-        : [...prev, category._id]
-    );
-  };
-
-  const handleMainImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
@@ -130,7 +156,10 @@ export default function CreateRecipeForm() {
         const next = [...prev];
         next[stepIndex] = {
           ...next[stepIndex],
-          images: [...(next[stepIndex].images as string[]), ...result.map((r) => r.url)],
+          images: [
+            ...(next[stepIndex].images as string[]),
+            ...result.map((r) => r.url),
+          ],
         };
         return next;
       });
@@ -144,7 +173,9 @@ export default function CreateRecipeForm() {
       const next = [...prev];
       next[stepIndex] = {
         ...next[stepIndex],
-        images: (next[stepIndex].images as string[]).filter((_, i) => i !== imageIndex),
+        images: (next[stepIndex].images as string[]).filter(
+          (_, i) => i !== imageIndex
+        ),
       };
       return next;
     });
@@ -197,7 +228,9 @@ export default function CreateRecipeForm() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user) {
-      showInfo("Vui lòng đăng nhập để tạo công thức", { onConfirm: () => navigate("/auth/login") });
+      showInfo("Vui lòng đăng nhập để tạo công thức", {
+        onConfirm: () => navigate("/auth/login"),
+      });
       return;
     }
     if (!recipeName.trim() || !description.trim()) {
@@ -214,7 +247,9 @@ export default function CreateRecipeForm() {
     }
     try {
       setIsSubmitting(true);
-      const validIngredients = ingredients.filter((i) => i.name.trim() && i.amount.trim());
+      const validIngredients = ingredients.filter(
+        (i) => i.name.trim() && i.amount.trim()
+      );
       const processedIngredients: IngredientDto[] = [];
       for (const ing of validIngredients) {
         if (ing.ingredientId) {
@@ -225,18 +260,34 @@ export default function CreateRecipeForm() {
           });
         } else {
           try {
-            const created = await ingredientService.createIngredient({ name: ing.name.trim(), unit: ing.unit || "" });
+            const created = await ingredientService.createIngredient({
+              name: ing.name.trim(),
+              unit: ing.unit || "",
+            });
             processedIngredients.push({
               ingredientId: created.ingredient.id,
               quantity: parseFloat(ing.amount) || 0,
               unit: ing.unit || "",
             });
           } catch (e: any) {
-            const message = (e?.response?.data?.message || e?.message || "").toString().toLowerCase();
-            if (message.includes("already exists") || message.includes("unique") || message.includes("slug")) {
+            const message = (e?.response?.data?.message || e?.message || "")
+              .toString()
+              .toLowerCase();
+            if (
+              message.includes("already exists") ||
+              message.includes("unique") ||
+              message.includes("slug")
+            ) {
               try {
-                const search = await ingredientService.getIngredients({ keyword: ing.name.trim(), limit: 10 });
-                const found = (search.ingredients || []).find((it: any) => (it.name || "").toString().toLowerCase() === ing.name.trim().toLowerCase());
+                const search = await ingredientService.getIngredients({
+                  keyword: ing.name.trim(),
+                  limit: 10,
+                });
+                const found = (search.ingredients || []).find(
+                  (it: any) =>
+                    (it.name || "").toString().toLowerCase() ===
+                    ing.name.trim().toLowerCase()
+                );
                 if (found?.id) {
                   processedIngredients.push({
                     ingredientId: found.id,
@@ -255,20 +306,38 @@ export default function CreateRecipeForm() {
 
       const validSteps = steps.filter((s) => s.detail.trim());
       const safeDescription = description.trim().slice(0, 180);
+      const categoriesData: any = {};
+      selectedCategories.forEach((categoryId) => {
+        categories.forEach((group) => {
+          group.items.forEach((cat) => {
+            if (cat._id === categoryId) {
+              categoriesData[group.key] = categoryId;
+            }
+          });
+        });
+      });
+
       const recipeData: CreateRecipeDto = {
         authorId: Number(user.id),
         title: recipeName.trim(),
         description: safeDescription,
         time: parseInt(cookingTime) || 0,
         ingredients: processedIngredients,
-        steps: validSteps.map((s): StepDto => ({ description: s.detail.trim().slice(0, 180), image: (s.images as string[])[0] })),
+        steps: validSteps.map(
+          (s): StepDto => ({
+            description: s.detail.trim().slice(0, 180),
+            image: (s.images as string[])[0],
+          })
+        ),
         images: uploadedImages.map((url): ImageDto => ({ imageUrl: url })),
         utensils: [] as UtensilDto[],
-        categories: { mealType: selectedCategories[0] as any },
+        categories: categoriesData,
       };
 
       const resp = await recipesService.createRecipe(recipeData);
-      showSuccess("Tạo công thức thành công!", { onConfirm: () => navigate(`/detail-recipe/${resp.recipe.id}`) });
+      showSuccess("Tạo công thức thành công!", {
+        onConfirm: () => navigate(`/detail-recipe/${resp.recipe.id}`),
+      });
     } catch (error) {
       showError("Không thể tạo công thức");
     } finally {
@@ -381,7 +450,11 @@ export default function CreateRecipeForm() {
                     <button
                       type="button"
                       className="px-3 py-4 border border-gray-300 rounded-l-lg bg-gray-100 hover:bg-gray-200 transition-all duration-200"
-                      onClick={() => setServings(Math.max(1, parseInt(servings) - 1).toString())}
+                      onClick={() =>
+                        setServings(
+                          Math.max(1, parseInt(servings) - 1).toString()
+                        )
+                      }
                     >
                       <Minus className="w-4 h-4 text-gray-600" />
                     </button>
@@ -396,7 +469,9 @@ export default function CreateRecipeForm() {
                     <button
                       type="button"
                       className="px-3 py-4 border border-gray-300 rounded-r-lg bg-gray-100 hover:bg-gray-200 transition-all duration-200"
-                      onClick={() => setServings((parseInt(servings) + 1).toString())}
+                      onClick={() =>
+                        setServings((parseInt(servings) + 1).toString())
+                      }
                     >
                       <Plus className="w-4 h-4 text-gray-600" />
                     </button>
@@ -423,34 +498,43 @@ export default function CreateRecipeForm() {
                   Danh mục món ăn
                 </label>{" "}
                 <p className="text-sm text-gray-500 mb-3">
-                  Chọn các danh mục phù hợp với món ăn của bạn
+                  Chọn các danh mục phù hợp với món ăn của bạn. Mỗi loại danh
+                  mục chỉ có thể chọn một giá trị.
                 </p>{" "}
                 <div className="flex flex-wrap gap-2 py-1">
-                  {selectedCategories
-                    .slice(0, visibleCategoryCount)
-                    .map((categoryId) => {
-                      let categoryName = "Unknown";
-                      categories.forEach((group) => {
-                        group.items.forEach((cat) => {
-                          if (cat._id === categoryId) {
-                            categoryName = cat.name;
-                          }
-                        });
-                      });
-                      return (
-                        <button
-                          key={categoryId}
-                          type="button"
-                          className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-amber-500 text-white shadow-md"
-                        >
-                          {categoryName}
-                        </button>
-                      );
-                    })}
-                  {selectedCategories.length > visibleCategoryCount && (
-                    <div className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                      +{selectedCategories.length - visibleCategoryCount}
+                  {selectedCategories.length === 0 ? (
+                    <div className="text-sm text-gray-500 italic">
+                      Chưa có danh mục nào được chọn
                     </div>
+                  ) : (
+                    <>
+                      {selectedCategories
+                        .slice(0, visibleCategoryCount)
+                        .map((categoryId) => {
+                          let categoryName = "Unknown";
+                          categories.forEach((group) => {
+                            group.items.forEach((cat) => {
+                              if (cat._id === categoryId) {
+                                categoryName = cat.name;
+                              }
+                            });
+                          });
+                          return (
+                            <button
+                              key={categoryId}
+                              type="button"
+                              className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 bg-amber-500 text-white shadow-md"
+                            >
+                              {categoryName}
+                            </button>
+                          );
+                        })}
+                      {selectedCategories.length > visibleCategoryCount && (
+                        <div className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                          +{selectedCategories.length - visibleCategoryCount}
+                        </div>
+                      )}
+                    </>
                   )}
                   <button
                     type="button"
@@ -458,7 +542,7 @@ export default function CreateRecipeForm() {
                     className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
                   >
                     <Plus className="w-4 h-4" />
-                  </button>{" "}
+                  </button>
                 </div>{" "}
                 <CategoryModal
                   isOpen={showCategoryModal}
@@ -466,18 +550,36 @@ export default function CreateRecipeForm() {
                   categories={categories as any}
                   selectedCategories={selectedCategories as any}
                   onToggleCategory={(cat: any) => {
-                    setSelectedCategories((prev: any) => (
-                      prev.includes(cat._id)
-                        ? prev.filter((id: string) => id !== cat._id)
-                        : [...prev, cat._id]
-                    ));
+                    setSelectedCategories((prev: any) => {
+                      if (prev.includes(cat._id)) {
+                        return prev.filter((id: string) => id !== cat._id);
+                      } else {
+                        let categoryGroupKey = "";
+                        categories.forEach((group) => {
+                          if (
+                            group.items.some((item) => item._id === cat._id)
+                          ) {
+                            categoryGroupKey = group.key;
+                          }
+                        });
+
+                        const filtered = prev.filter((id: string) => {
+                          return !categories.some(
+                            (group) =>
+                              group.key === categoryGroupKey &&
+                              group.items.some((item) => item._id === id)
+                          );
+                        });
+
+                        return [...filtered, cat._id];
+                      }
+                    });
                   }}
                   onClearAll={() => setSelectedCategories([] as any)}
                 />
               </div>
             </div>
           </div>{" "}
-
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-gray-50 rounded-xl border border-gray-200">
               <div className="p-6">
@@ -619,11 +721,17 @@ export default function CreateRecipeForm() {
                               ? "border-green-500 bg-green-50 text-gray-600 cursor-not-allowed"
                               : "border-gray-300"
                           }`}
-                          title={ingredient.ingredientId ? "Đơn vị được khóa cho nguyên liệu từ database" : ""}
+                          title={
+                            ingredient.ingredientId
+                              ? "Đơn vị được khóa cho nguyên liệu từ database"
+                              : ""
+                          }
                         >
                           <option value="">Đơn vị</option>
                           {getDynamicIngredientUnits(ingredient).map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -633,7 +741,11 @@ export default function CreateRecipeForm() {
                           variant="outline"
                           size="sm"
                           className="text-red-500 border-red-200 hover:bg-red-50"
-                          onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                          onClick={() =>
+                            setIngredients((prev) =>
+                              prev.filter((_, i) => i !== idx)
+                            )
+                          }
                         >
                           <Minus className="w-4 h-4" />
                         </Button>
@@ -644,7 +756,18 @@ export default function CreateRecipeForm() {
                     type="button"
                     variant="outline"
                     className="w-full border-dashed border-gray-300 text-gray-600 hover:bg-gray-100"
-                    onClick={() => setIngredients((prev) => ([...prev, { id: generateUniqueId(), name: "", amount: "", unit: "", ingredientId: null }]))}
+                    onClick={() =>
+                      setIngredients((prev) => [
+                        ...prev,
+                        {
+                          id: generateUniqueId(),
+                          name: "",
+                          amount: "",
+                          unit: "",
+                          ingredientId: null,
+                        },
+                      ])
+                    }
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Thêm nguyên liệu
@@ -779,7 +902,11 @@ export default function CreateRecipeForm() {
                             variant="outline"
                             size="sm"
                             className="text-red-500 border-red-200 hover:bg-red-50 flex-shrink-0"
-                            onClick={() => setSteps((prev) => prev.filter((_, i) => i !== idx))}
+                            onClick={() =>
+                              setSteps((prev) =>
+                                prev.filter((_, i) => i !== idx)
+                              )
+                            }
                           >
                             <X className="w-3 h-3" />
                           </Button>
@@ -790,7 +917,18 @@ export default function CreateRecipeForm() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setSteps((prev) => ([...prev, { id: generateUniqueId(), summary: "", detail: "", time: "", images: [] }]))}
+                    onClick={() =>
+                      setSteps((prev) => [
+                        ...prev,
+                        {
+                          id: generateUniqueId(),
+                          summary: "",
+                          detail: "",
+                          time: "",
+                          images: [],
+                        },
+                      ])
+                    }
                     className="w-full border-dashed border-gray-300 text-gray-600 hover:bg-gray-100"
                   >
                     <Plus className="w-4 h-4 mr-2" />
