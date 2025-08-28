@@ -268,19 +268,10 @@ export default function PostDetail() {
               prev ? { ...prev, shares_count: sharesCount } : prev
             );
           }}
+          onShowSuccess={showInfo}
+          onShowError={showError}
         />
       </div>
-      <AlertPopup
-        isOpen={alert.isOpen}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        confirmText={alert.confirmText}
-        showCancel={alert.showCancel}
-        cancelText={alert.cancelText}
-        onConfirm={alert.onConfirm}
-        onClose={closeAlert}
-      />
       <AlertPopup
         isOpen={alert.isOpen}
         type={alert.type}

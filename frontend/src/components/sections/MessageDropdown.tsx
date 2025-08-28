@@ -99,6 +99,12 @@ const MessageDropdown = () => {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
 
     const apiBase = API_CONSTANTS.BASE_URL;
     const socketBase = apiBase.replace(/\/api$/, "");
@@ -112,24 +118,37 @@ const MessageDropdown = () => {
       socket.on("new_message", (payload: any) => {
         const msg = payload?.message || payload;
         if (!msg) return;
+
         setConversations((prev) => {
           const next = [...prev];
           const idx = next.findIndex((c: any) => c.id === msg.conversationId);
           if (idx >= 0) {
             const conv = next[idx];
+            const isOwnMessage = Number(msg.sender) === Number(user?.id);
+
+            let newUnreadCount;
+            if (isOwnMessage) {
+              newUnreadCount = 0;
+            } else {
+              newUnreadCount = (conv.unreadCount || 0) + 1;
+            }
+
             next[idx] = {
               ...conv,
               lastMessage: msg,
-              unreadCount: (conv.unreadCount || 0) + 1,
+              unreadCount: newUnreadCount,
             };
           } else {
+            const isOwnMessage = Number(msg.sender) === Number(user?.id);
+            const initialUnreadCount = isOwnMessage ? 0 : 1;
+
             next.unshift({
               id: msg.conversationId,
               name: null,
               avatar: null,
               members: [],
               lastMessage: msg,
-              unreadCount: 1,
+              unreadCount: initialUnreadCount,
             });
           }
           return sortConversations(next);
@@ -144,7 +163,7 @@ const MessageDropdown = () => {
         socketRef.current = null;
       }
     };
-  }, []);
+  }, [user?.id]);
 
   return (
     <div className="relative" ref={dropdownRef}>

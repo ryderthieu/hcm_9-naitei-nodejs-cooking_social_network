@@ -8,8 +8,6 @@ import type { Conversation, Member } from "../../types/conversation.type";
 import { useAuth } from "../../contexts/AuthContext";
 import { DEFAULT_AVATAR_URL } from "../../constants/constants";
 import { GroupAvatar } from "../Message/GroupAvatar";
-import AlertPopup from "./AlertPopup";
-import { useAlertPopup } from "../../hooks";
 
 interface SharePopupProps {
   isOpen: boolean;
@@ -18,6 +16,8 @@ interface SharePopupProps {
   postId: number;
   image: string;
   onShareSuccess?: (sharesCount: number) => void;
+  onShowSuccess?: (message: string) => void;
+  onShowError?: (message: string) => void;
 }
 
 export default function SharePopup({
@@ -27,8 +27,9 @@ export default function SharePopup({
   postId,
   image,
   onShareSuccess,
+  onShowSuccess,
+  onShowError,
 }: SharePopupProps) {
-  const { alert, showError, showSuccess, closeAlert } = useAlertPopup();
   const [activeTab, setActiveTab] = useState<"social" | "messages">("social");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<
@@ -162,11 +163,11 @@ export default function SharePopup({
           break;
         case "copy":
           navigator.clipboard.writeText(shareUrl);
-          showSuccess("Đã sao chép link bài viết!");
+          onShowSuccess?.("Đã sao chép link bài viết!");
           break;
       }
     } catch (e) {
-      showError("Không thể chia sẻ bài viết. Vui lòng thử lại!");
+      onShowError?.("Không thể chia sẻ bài viết. Vui lòng thử lại!");
     } finally {
       setSharing(false);
     }
@@ -224,10 +225,10 @@ export default function SharePopup({
       });
 
       socket.disconnect();
+      onShowSuccess?.("Đã chia sẻ bài viết qua tin nhắn!");
       onClose();
-      showSuccess("Đã chia sẻ bài viết qua tin nhắn!");
     } catch (e) {
-      showError("Không thể chia sẻ bài viết. Vui lòng thử lại!");
+      onShowError?.("Không thể chia sẻ bài viết. Vui lòng thử lại!");
     } finally {
       setSharing(false);
     }
@@ -420,17 +421,6 @@ export default function SharePopup({
           </div>
         )}
       </div>
-      <AlertPopup
-        isOpen={alert.isOpen}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        confirmText={alert.confirmText}
-        showCancel={alert.showCancel}
-        cancelText={alert.cancelText}
-        onConfirm={alert.onConfirm}
-        onClose={closeAlert}
-      />
     </div>
   );
 }

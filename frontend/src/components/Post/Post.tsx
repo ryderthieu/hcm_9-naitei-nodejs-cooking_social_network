@@ -271,6 +271,8 @@ export default function Post({
             prev ? { ...prev, shares_count: sharesCount } : prev
           );
         }}
+        onShowSuccess={showInfo}
+        onShowError={showError}
       />
 
       <EditPostPopup
