@@ -115,65 +115,65 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
           <div className="w-16 h-1 bg-gradient-to-br from-orange-500 to-amber-500 mb-6"></div>
         </div>
 
-      {errorMessage && (
-        <div className="text-center py-12 text-red-500">
-          <p>{errorMessage}</p>
-        </div>
-      )}
-
-      {!errorMessage && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-            {recipes.map((recipe, index) => (
-              <RecipeCard
-                key={recipe._id || recipe.id || index}
-                id={Number(recipe.id ?? recipe._id) || 0}
-                image={recipe.image}
-                category={recipe.category}
-                title={recipe.title}
-                time={recipe.time}
-                author={recipe.author}
-                currentUser={currentUsername}
-                onEdit={() => {
-                  navigate(`/edit-recipe/${recipe.id ?? recipe._id}`);
-                }}
-                onDelete={() => handleDelete(recipe.id ?? recipe._id ?? 0)}
-              />
-            ))}
+        {errorMessage && (
+          <div className="text-center py-12 text-red-500">
+            <p>{errorMessage}</p>
           </div>
+        )}
 
-          {showLoadMore && (
-            <div className="flex justify-center mt-8">
-              <button
-                onClick={handleLoadMore}
-                disabled={loading}
-                className="px-6 md:px-8 py-1 md:py-3 bg-[#ff4b4b] cursor-pointer text-white font-bold rounded-3xl border-2 hover:bg-transparent hover:text-[#FF6363] hover:border-[#FF6363] transition duration-300 text-sm md:text-base shadow-md hover:shadow-lg disabled:opacity-50"
-              >
-                {loading ? "Đang tải..." : "Xem thêm"}
-              </button>
+        {!errorMessage && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-2 gap-4 md:gap-8">
+              {recipes.map((recipe, index) => (
+                <RecipeCard
+                  key={recipe._id || recipe.id || index}
+                  id={Number(recipe.id ?? recipe._id) || 0}
+                  image={recipe.image}
+                  category={recipe.category}
+                  title={recipe.title}
+                  time={recipe.time}
+                  author={recipe.author}
+                  currentUser={currentUsername}
+                  onEdit={() => {
+                    navigate(`/edit-recipe/${recipe.id ?? recipe._id}`);
+                  }}
+                  onDelete={() => handleDelete(recipe.id ?? recipe._id ?? 0)}
+                />
+              ))}
             </div>
-          )}
 
-          {recipes.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">
-                Không tìm thấy công thức nào.
-              </p>
-            </div>
-          )}
-        </>
-      )}
+            {showLoadMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loading}
+                  className="px-6 md:px-8 py-1 md:py-3 bg-[#ff4b4b] cursor-pointer text-white font-bold rounded-3xl border-2 hover:bg-transparent hover:text-[#FF6363] hover:border-[#FF6363] transition duration-300 text-sm md:text-base shadow-md hover:shadow-lg disabled:opacity-50"
+                >
+                  {loading ? "Đang tải..." : "Xem thêm"}
+                </button>
+              </div>
+            )}
 
-      <div className="flex justify-end mt-8">
-        <button
-          className="bg-pink-500 hover:bg-pink-600 text-white font-semibold py-4 px-6 rounded-full flex items-center gap-2 shadow-lg z-100 cursor-pointer"
-          onClick={() => navigate("/create-recipe")}
-        >
-          <Plus size={20} />
-          <span>Tạo công thức mới</span>
-        </button>
+            {recipes.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">
+                  Không tìm thấy công thức nào.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="flex justify-end mt-8">
+          <button
+            className="bg-pink-500 hover:bg-pink-600 text-white font-semibold py-4 px-6 rounded-full flex items-center gap-2 shadow-lg z-100 cursor-pointer"
+            onClick={() => navigate("/create-recipe")}
+          >
+            <Plus size={20} />
+            <span>Tạo công thức mới</span>
+          </button>
+        </div>
       </div>
-    </div>
     </>
   );
 };
