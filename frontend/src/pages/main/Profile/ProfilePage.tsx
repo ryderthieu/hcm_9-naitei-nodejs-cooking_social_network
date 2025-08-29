@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getUserByUsername, toggleFollow } from "../../../services/user.service";
+import {
+  getUserByUsername,
+  toggleFollow,
+} from "../../../services/user.service";
 
 import { AlertPopup } from "../../../components/popup";
 import { useAlertPopup } from "../../../hooks/useAlertPopup";
@@ -11,8 +14,15 @@ import PostsTab from "../../../components/sections/Profile/PostsTab";
 import RecipesTab from "../../../components/sections/Profile/RecipesTab";
 import SavedContent from "../../../components/sections/Profile/SavedContent";
 import { EditProfilePopup } from "../../../components/popup";
-import type { UserData, UserStats, UserProfile } from "../../../types/user.type";
-import { getConversations, createConversation } from "../../../services/conversation.service";
+import type {
+  UserData,
+  UserStats,
+  UserProfile,
+} from "../../../types/user.type";
+import {
+  getConversations,
+  createConversation,
+} from "../../../services/conversation.service";
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -96,19 +106,21 @@ export default function ProfilePage() {
         };
         setUserStats(updatedStats);
       }
-
     } catch (error) {
       setIsFollowing(!isFollowing);
       showError("Không thể thực hiện thao tác");
     }
   };
 
-  const handleStatsChange = (type: 'followers' | 'following', count: number) => {
-    setUserStats(prevStats => {
+  const handleStatsChange = (
+    type: "followers" | "following",
+    count: number
+  ) => {
+    setUserStats((prevStats) => {
       if (!prevStats) return prevStats;
       return {
         ...prevStats,
-        [type]: { count }
+        [type]: { count },
       };
     });
   };
@@ -121,28 +133,27 @@ export default function ProfilePage() {
       return;
     }
     try {
-      const conversationsResponse = await getConversations();
-      const conversations = conversationsResponse?.conversations || conversationsResponse || [];
-      const existing = conversations.find((c: any) => Array.isArray(c.members) && c.members.some((m: any) => m.username === targetUsername));
-      if (existing?.id) {
-        navigate(`/messages/${existing.id}`);
+      const target = await getUserByUsername(targetUsername);
+      if (!target?.id) {
+        showInfo("Không thể tìm thấy người dùng này");
         return;
       }
 
-      const target = await getUserByUsername(targetUsername);
-      if (!target?.id) {
-        navigate("/messages");
-        return;
-      }
-      const payload = { members: [target.id], name: `${target.firstName} ${target.lastName}`, avatar: target.avatar };
+      const payload = {
+        members: [target.id],
+        name: `${target.firstName} ${target.lastName}`,
+        avatar: target.avatar,
+      };
+
       const created = await createConversation(payload);
       if (created?.conversation?.id) {
         navigate(`/messages/${created.conversation.id}`);
       } else {
-        navigate("/messages");
+        showInfo("Không thể tạo cuộc trò chuyện");
       }
     } catch (e) {
-      navigate("/messages");
+      console.error("Lỗi khi xử lý tin nhắn:", e);
+      showInfo("Có lỗi xảy ra, vui lòng thử lại");
     }
   };
 
