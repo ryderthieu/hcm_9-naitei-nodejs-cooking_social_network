@@ -1,4 +1,12 @@
-import { IsArray, IsOptional, IsString, IsNotEmpty, ArrayMinSize, IsInt } from 'class-validator';
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  IsNotEmpty,
+  ArrayMinSize,
+  IsInt,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateConversationDto {
