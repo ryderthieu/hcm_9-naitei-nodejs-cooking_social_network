@@ -1290,7 +1290,7 @@ export default function MessagePage() {
                                                   .senderUser.lastName
                                               }
                                             </div>
-                                            <div className="truncate">
+                                            <div className="truncate break-all">
                                               {(() => {
                                                 const rt =
                                                   message.replyToMessage?.type;
@@ -1342,7 +1342,7 @@ export default function MessagePage() {
                                         {(() => {
                                           if (message.type === "TEXT") {
                                             return (
-                                              <p className="text-sm">
+                                              <p className="text-sm break-all">
                                                 {message.content}
                                               </p>
                                             );
@@ -1388,7 +1388,7 @@ export default function MessagePage() {
                                               );
                                             } catch {
                                               return (
-                                                <p className="text-sm break-words">
+                                                <p className="text-sm break-all">
                                                   {message.content}
                                                 </p>
                                               );
@@ -1435,7 +1435,7 @@ export default function MessagePage() {
                                               );
                                             } catch {
                                               return (
-                                                <p className="text-sm">
+                                                <p className="text-sm break-all">
                                                   {message.content}
                                                 </p>
                                               );
@@ -1479,14 +1479,14 @@ export default function MessagePage() {
                                               );
                                             } catch {
                                               return (
-                                                <p className="text-sm">
+                                                <p className="text-sm break-words">
                                                   {message.content}
                                                 </p>
                                               );
                                             }
                                           }
                                           return (
-                                            <p className="text-sm">
+                                            <p className="text-sm break-all">
                                               {message.content}
                                             </p>
                                           );
