@@ -47,11 +47,7 @@ export class ConversationsService {
               userId: { in: allMembers },
             },
           },
-          AND: allMembers.map((memberId) => ({
-            members: {
-              some: { userId: memberId },
-            },
-          })),
+          isGroup: false,
         },
         include: {
           members: {
@@ -74,9 +70,26 @@ export class ConversationsService {
         existingConversation &&
         existingConversation.members.length === PRIVATE_CHAT_MEMBERS
       ) {
-        throw new BadRequestException(
-          'Conversation already exists between these users',
-        );
+        const formattedMembers = existingConversation.members.map((member) => ({
+          id: member.user.id,
+          username: member.user.username,
+          avatar: member.user.avatar,
+          firstName: member.user.firstName,
+          lastName: member.user.lastName,
+        }));
+
+        return {
+          success: true,
+          conversation: {
+            id: existingConversation.id,
+            name: existingConversation.name,
+            avatar: existingConversation.avatar,
+            createdAt: existingConversation.createdAt,
+            members: formattedMembers,
+            lastMessage: null,
+          },
+          message: 'Existing conversation found',
+        };
       }
     }
 
@@ -84,6 +97,7 @@ export class ConversationsService {
       data: {
         name: name || '',
         avatar: avatar || null,
+        isGroup: allMembers.length > PRIVATE_CHAT_MEMBERS,
         members: {
           createMany: {
             data: allMembers.map((memberId) => ({ userId: memberId })),
@@ -531,7 +545,7 @@ export class ConversationsService {
       );
     }
 
-    if (conversation.members.length === PRIVATE_CHAT_MEMBERS) {
+    if (!conversation.isGroup) {
       return await this.createConversation(userId, {
         members: [
           ...conversation.members.map((member) => member.userId),

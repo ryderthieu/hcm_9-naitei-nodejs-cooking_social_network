@@ -5,7 +5,10 @@ import { io, Socket } from "socket.io-client";
 import { API_CONSTANTS, DEFAULT_AVATAR_URL } from "../../constants/constants";
 import { GroupAvatar } from "../Message/GroupAvatar";
 import { getAccessToken } from "../../services/api.service";
-import { getConversations } from "../../services/conversation.service";
+import {
+  getConversations,
+  getConversation,
+} from "../../services/conversation.service";
 import { useAuth } from "../../contexts/AuthContext";
 import { timeAgoVi } from "../../utils/timeUtils";
 
@@ -16,6 +19,9 @@ const MessageDropdown = () => {
   const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const conversationUpdateTimeoutRef = useRef<
+    Record<number, ReturnType<typeof setTimeout>>
+  >({});
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -115,6 +121,7 @@ const MessageDropdown = () => {
         auth: { token },
       });
       socketRef.current = socket;
+
       socket.on("new_message", (payload: any) => {
         const msg = payload?.message || payload;
         if (!msg) return;
@@ -154,14 +161,68 @@ const MessageDropdown = () => {
           return sortConversations(next);
         });
       });
+
+      socket.on(
+        "conversation_update",
+        ({ conversationId }: { conversationId: number }) => {
+          if (conversationUpdateTimeoutRef.current[conversationId]) {
+            clearTimeout(conversationUpdateTimeoutRef.current[conversationId]);
+          }
+
+          conversationUpdateTimeoutRef.current[conversationId] = setTimeout(
+            async () => {
+              try {
+                const updatedConversation = await getConversation(
+                  conversationId
+                );
+                if (updatedConversation) {
+                  setConversations((prev) => {
+                    const updated = [...prev];
+
+                    const idx = prev.findIndex((c) => c.id === conversationId);
+                    if (idx === -1) {
+                      if (updatedConversation.lastMessage) {
+                        return [updatedConversation, ...updated];
+                      } else {
+                        return [...updated, updatedConversation];
+                      }
+                    }
+
+                    updated[idx] = updatedConversation;
+
+                    updated.splice(idx, 1);
+
+                    if (updatedConversation.lastMessage) {
+                      return [updatedConversation, ...updated];
+                    } else {
+                      return [...updated, updatedConversation];
+                    }
+                  });
+                }
+              } catch (error) {
+                console.error("Failed to update conversation:", error);
+              }
+
+              delete conversationUpdateTimeoutRef.current[conversationId];
+            },
+            100
+          );
+        }
+      );
     }
 
     return () => {
       if (socketRef.current) {
         socketRef.current.off("new_message");
+        socketRef.current.off("conversation_update");
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+
+      Object.values(conversationUpdateTimeoutRef.current).forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      conversationUpdateTimeoutRef.current = {};
     };
   }, [user?.id]);
 

@@ -382,6 +382,7 @@ model Conversation {
   name      String?
   avatar    String?
   createdAt DateTime @default(now())
+  isGroup   Boolean  @default(false)
 
   members  Member[]
   messages Message[]
