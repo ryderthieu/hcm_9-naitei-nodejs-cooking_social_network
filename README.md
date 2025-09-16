@@ -4,7 +4,7 @@
 A social media platform designed for cooking enthusiasts. Users can share their favorite recipes, post cooking tips, write blogs about food, and engage in meaningful discussions with other members. The platform fosters a friendly community where people can exchange ideas, discover new dishes, and improve their cooking skills together.
 
 ## Demo
-**Video Demo:** [Link](https://your-demo-link.com)  
+**Video Demo:** [Link](https://drive.google.com/file/d/1ToZgqW9oLC2QUT_OuIcd9dr9DCtMlusL/view?usp=sharing)  
 
 ---
 
